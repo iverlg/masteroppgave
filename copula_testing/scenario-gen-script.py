@@ -18,27 +18,28 @@ MAPPING = dict({
     "hydro_seasonal": df_hydro_seasonal
 })
 
-LOCATION = "DE"
-DF_X = "offshore_wind"
-DF_Y = "onshore_wind"
+LOCATION_X = "DE"
+LOCATION_Y = "FR"
+DF_X = "load"
+DF_Y = "load"
 N_SCENARIOS = 10
 
-def remove_time_and_filter_location(df: pd.DataFrame) -> pd.DataFrame:
+def remove_time_and_filter_location(df: pd.DataFrame, location: str) -> pd.DataFrame:
     _df = df.copy()
     _df = _df.drop(columns=["time"])
-    _df = _df[[LOCATION]]
+    _df = _df[[location]]
     return _df
 
-def plot_copula(df: pd.DataFrame, scenario = None, distance: float = None) -> None:
+def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, scenario = None, distance: float = None) -> None:
     _df = df.copy()
     x = _df["rank_value_x"]
     y = _df["rank_value_y"]
 
     plt.figure(figsize=(8,6))
     plt.scatter(x, y, color="blue", s=0.2)
-    plt.xlabel(f"{DF_X} {'scenario '+str(scenario) if scenario else ''}, {LOCATION}")
-    plt.ylabel(f"{DF_Y} {'scenario '+str(scenario) if scenario else ''}, {LOCATION}")
-    plt.title(f"Rank scatter: {LOCATION}{('; Distance = '+str(distance)) if distance != None else ''}")
+    plt.xlabel(f"{DF_X} {loc_x}, {'scenario '+str(scenario) if scenario else 'original'}")
+    plt.ylabel(f"{DF_Y} {loc_y}, {'scenario '+str(scenario) if scenario else 'original'}")
+    plt.title(f"Rank scatter: {loc_x}-{loc_y}{('; Distance = '+str(distance)) if distance != None else ''}")
     plt.savefig(f"copula_testing/copula_figs/{'scenario_'+str(scenario) if scenario != None else 'original'}")
 
 def generate_random_scenario() -> list:
@@ -100,16 +101,18 @@ def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) 
         closest_original_row = _df_copula.iloc[(_df_copula['rank_value_x']-sample_x).abs().argsort()[:1]]
 
         # Calculate abs distance based on rank_value_y
-        distance += abs(closest_original_row["rank_value_y"].values[0]-sample_y)
+        distance += abs(closest_original_row["rank_value_y"].values[0]-sample_y) + abs(closest_original_row["rank_value_x"]-sample_x)
 
     return distance
 
 def main():
-    df_x = remove_time_and_filter_location(MAPPING[DF_X])
-    df_y = remove_time_and_filter_location(MAPPING[DF_Y])
+    loc_x = LOCATION_X
+    loc_y = LOCATION_Y
+    df_x = remove_time_and_filter_location(MAPPING[DF_X], location=loc_x)
+    df_y = remove_time_and_filter_location(MAPPING[DF_Y], location=loc_y)
 
     df_copula_original = generate_copula(df_x, df_y)
-    plot_copula(df_copula_original, scenario=None, distance=None)
+    plot_copula(df_copula_original, loc_x, loc_y, scenario=None, distance=None)
     
     min_distance = np.inf
     best_copula: pd.DataFrame = None
@@ -119,11 +122,11 @@ def main():
         df_copula_sample = generate_copula(df_x, df_y, sampling_hours=sampling_hours)
         sample_distance = calculate_distance(df_copula_original, df_copula_sample)
         print(f"Sample distance for scenario {n}: {sample_distance}")
-        plot_copula(df_copula_sample, scenario=n, distance=sample_distance)
+        plot_copula(df_copula_sample, loc_x, loc_y, scenario=n, distance=sample_distance)
         if sample_distance < min_distance:
             best_copula = df_copula_sample
             min_distance = sample_distance
-    plot_copula(best_copula, scenario='best', distance=min_distance)
+    plot_copula(best_copula, loc_x, loc_y, scenario='best', distance=min_distance)
 
 if __name__ == "__main__":
     main()
