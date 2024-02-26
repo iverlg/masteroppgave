@@ -2,12 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-df_onshr_wind = pd.read_csv("copula_testing/scenario_data/windonshore.csv")
-df_load = pd.read_csv("copula_testing/scenario_data/electricload.csv")
-df_solar = pd.read_csv("copula_testing/scenario_data/solar.csv")
-df_offshr_wind = pd.read_csv("copula_testing/scenario_data/windoffshore.csv")
-df_hydro_ror = pd.read_csv("copula_testing/scenario_data/hydroror.csv")
-df_hydro_seasonal = pd.read_csv("copula_testing/scenario_data/hydroseasonal.csv")
+AGGR = True
+
+df_onshr_wind = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/windonshore.csv")
+df_load = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/electricload.csv")
+df_solar = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/solar.csv")
+df_offshr_wind = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/windoffshore.csv")
+df_hydro_ror = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/hydroror.csv")
+df_hydro_seasonal = pd.read_csv(f"copula_testing/scenario_data{'-aggr' if AGGR else ''}/hydroseasonal.csv")
 
 MAPPING = dict({
     "onshore_wind": df_onshr_wind,
@@ -18,8 +20,8 @@ MAPPING = dict({
     "hydro_seasonal": df_hydro_seasonal
 })
 
-LOCATION_X = "DE"
-LOCATION_Y = "FR"
+LOCATION_X = "north"
+LOCATION_Y = "east"
 DF_X = "load"
 DF_Y = "load"
 N_SCENARIOS = 10
@@ -76,7 +78,10 @@ def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list = None) -> pd.
     _df = df.copy()
     if sampling_hours != None:
         _df = _df.filter(items=sampling_hours, axis=0)
-    _df["rank"] = _df.rank(method="first")
+
+    #_df["rank"] = _df.rank(method="first")
+    # Sample and reindex to get random order if tie
+    _df["rank"] = _df.sample(frac=1).rank(method='first').reindex_like(_df)
     _df["rank_value"] = _df["rank"] / len(_df)
     return _df
 
@@ -100,8 +105,9 @@ def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) 
         # Based on rank_value_x
         closest_original_row = _df_copula.iloc[(_df_copula['rank_value_x']-sample_x).abs().argsort()[:1]]
 
-        # Calculate abs distance based on rank_value_y
-        distance += abs(closest_original_row["rank_value_y"].values[0]-sample_y) + abs(closest_original_row["rank_value_x"]-sample_x)
+        # Calculate abs distance between sample point and 'closest' point (along x-axis) on original copula
+        distance += (abs(closest_original_row["rank_value_x"].values[0]-sample_x) + \
+                     abs(closest_original_row["rank_value_y"].values[0]-sample_y))
 
     return distance
 
