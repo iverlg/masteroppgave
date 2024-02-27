@@ -142,6 +142,7 @@ def run_empire_model(
             USE_TEMP_DIR=empire_config.use_temporary_directory,
             LOADCHANGEMODULE=empire_config.load_change_module,
             OPERATIONAL_DUALS=empire_config.compute_operational_duals,
+            north_sea=empire_config.north_sea
         )
 
     config_path = run_config.dataset_path / "config.txt"
@@ -205,6 +206,8 @@ def runner(data_managers):
 
     if version == "test":
         config = read_config_file(Path("config/testmyrun.yaml"))
+    elif version == "europe_agg_v50":
+        config = read_config_file(Path("config/aggrrun.yaml"))
     else:
         config = read_config_file(Path("config/myrun.yaml"))
 

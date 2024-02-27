@@ -23,6 +23,8 @@ args = parser.parse_args()
 ## Read config and setup folders ##
 if args.dataset == "test":
     config = read_config_file(Path("config/testrun.yaml"))
+elif args.dataset == "europe_agg_v50":
+    config = read_config_file(Path("config/aggrun.yaml"))
 else:
     config = read_config_file(Path(args.config_file))
 

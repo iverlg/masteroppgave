@@ -73,7 +73,6 @@ def generate_tab_files(file_path, tab_file_path):
     logger.info("Reading Sets.xlsx")
     SetsExcelData = pd.read_excel(file_path / "Sets.xlsx", sheet_name=None)
     read_sets(SetsExcelData, 'Nodes', tab_file_path, "Sets")
-    read_sets(SetsExcelData, 'OffshoreNodes', tab_file_path, "Sets")
     read_sets(SetsExcelData, 'Horizon', tab_file_path, "Sets")
     read_sets(SetsExcelData, 'LineType', tab_file_path, "Sets")
     read_sets(SetsExcelData, 'Technology', tab_file_path, "Sets")
@@ -84,6 +83,7 @@ def generate_tab_files(file_path, tab_file_path):
     read_file(SetsExcelData, 'GeneratorsOfTechnology', [0, 1], tab_file_path, "Sets", skipheaders=2)
     read_file(SetsExcelData, 'DirectionalLines', [0, 1], tab_file_path, "Sets", skipheaders=2)
     read_file(SetsExcelData, 'LineTypeOfDirectionalLines', [0, 1, 2], tab_file_path, "Sets", skipheaders=2)
+    read_sets(SetsExcelData, 'OffshoreNodes', tab_file_path, "Sets")
 
     # Reading GeneratorPeriod
     logger.info("Reading Generator.xlsx")
