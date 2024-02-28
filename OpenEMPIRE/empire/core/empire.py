@@ -518,7 +518,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 		data.load(filename=str(result_file_path / 'storPWInvCap.tab'), param=model.storPWInvCap, format="table")
 		data.load(filename=str(result_file_path / 'storENInvCap.tab'), param=model.storENInvCap, format="table")
 		data.load(filename=str(result_file_path / 'genInstalledCap.tab'), param=model.genInstalledCap, format="table")
-		data.load(filename=str(result_file_path / 'transmisionInstalledCap.tab'), param=model.transmisionInstalledCap, format="table")
+		data.load(filename=str(result_file_path / 'transmissionInstalledCap.tab'), param=model.transmissionInstalledCap, format="table")
 		data.load(filename=str(result_file_path / 'storPWInstalledCap.tab'), param=model.storPWInstalledCap, format="table")
 		data.load(filename=str(result_file_path / 'storENInstalledCap.tab'), param=model.storENInstalledCap, format="table")
 
@@ -1170,7 +1170,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 	f.close()
 
 	# Print first stage decisions for out-of-sample
-	f = open(result_file_path + "/" + 'genInvCap.tab', 'w', newline='')
+	f = open(result_file_path / 'genInvCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Generator","Period","genInvCap"])
 	for (n,g) in instance.GeneratorsOfNode:
@@ -1178,7 +1178,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n,g,i,value(instance.genInvCap[n,g,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'transmisionInvCap.tab', 'w', newline='')
+	f = open(result_file_path / 'transmisionInvCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["FromNode","ToNode","Period","transmisionInvCap"])
 	for (n1,n2) in instance.BidirectionalArc:
@@ -1186,7 +1186,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n1,n2,i,value(instance.transmisionInvCap[n1,n2,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'storPWInvCap.tab', 'w', newline='')
+	f = open(result_file_path / 'storPWInvCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Storage","Period","storPWInvCap"])
 	for (n,b) in instance.StoragesOfNode:
@@ -1194,7 +1194,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n,b,i,value(instance.storPWInvCap[n,b,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'storENInvCap.tab', 'w', newline='')
+	f = open(result_file_path / 'storENInvCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Storage","Period","storENInvCap"])
 	for (n,b) in instance.StoragesOfNode:
@@ -1202,7 +1202,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n,b,i,value(instance.storENInvCap[n,b,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'genInstalledCap.tab', 'w', newline='')
+	f = open(result_file_path / 'genInstalledCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Generator","Period","genInstalledCap"])
 	for (n,g) in instance.GeneratorsOfNode:
@@ -1210,15 +1210,15 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n,g,i,value(instance.genInstalledCap[n,g,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'transmisionInstalledCap.tab', 'w', newline='')
+	f = open(result_file_path / 'transmissionInstalledCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
-	writer.writerow(["FromNode","ToNode","Period","transmisionInstalledCap"])
+	writer.writerow(["FromNode","ToNode","Period","transmissionInstalledCap"])
 	for (n1,n2) in instance.BidirectionalArc:
 		for i in instance.PeriodActive:
-			writer.writerow([n1,n2,i,value(instance.transmisionInstalledCap[n1,n2,i])])
+			writer.writerow([n1,n2,i,value(instance.transmissionInstalledCap[n1,n2,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'storPWInstalledCap.tab', 'w', newline='')
+	f = open(result_file_path / 'storPWInstalledCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Storage","Period","storPWInstalledCap"])
 	for (n,b) in instance.StoragesOfNode:
@@ -1226,7 +1226,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			writer.writerow([n,b,i,value(instance.storPWInstalledCap[n,b,i])])
 	f.close()
 
-	f = open(result_file_path + "/" + 'storENInstalledCap.tab', 'w', newline='')
+	f = open(result_file_path / 'storENInstalledCap.tab', 'w', newline='')
 	writer = csv.writer(f, delimiter='\t')
 	writer.writerow(["Node","Storage","Period","storENInstalledCap"])
 	for (n,b) in instance.StoragesOfNode:

@@ -14,6 +14,7 @@ parser.add_argument(
     default="europe_agg_v50",
 )
 
+parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
 parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/run.yaml")
 
 # SGR: 'basic', 'filter', 'moment'
