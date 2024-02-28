@@ -19,6 +19,9 @@ def run_empire_model(
     run_config: EmpireRunConfiguration,
     data_managers: list[IDataManager],
     test_run: bool,
+    OUT_OF_SAMPLE: bool = False, 
+    sample_file_path: Path | None = None, 
+    sample_tree: int = 0
 ):
     for manager in data_managers:
         manager.apply()
@@ -142,7 +145,10 @@ def run_empire_model(
             USE_TEMP_DIR=empire_config.use_temporary_directory,
             LOADCHANGEMODULE=empire_config.load_change_module,
             OPERATIONAL_DUALS=empire_config.compute_operational_duals,
-            north_sea=empire_config.north_sea
+            north_sea=empire_config.north_sea,
+            OUT_OF_SAMPLE=OUT_OF_SAMPLE, 
+            sample_file_path=sample_file_path, 
+            sample_tree=sample_tree
         )
 
     config_path = run_config.dataset_path / "config.txt"
@@ -207,7 +213,7 @@ def runner(data_managers):
     if version == "test":
         config = read_config_file(Path("config/testmyrun.yaml"))
     elif version == "europe_agg_v50":
-        config = read_config_file(Path("config/aggrrun.yaml"))
+        config = read_config_file(Path("config/aggrun.yaml"))
     else:
         config = read_config_file(Path("config/myrun.yaml"))
 
