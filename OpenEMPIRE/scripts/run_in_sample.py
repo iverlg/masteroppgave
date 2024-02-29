@@ -62,14 +62,12 @@ if routine == "filter":
 elif routine == "moment":
     empire_config.moment_matching = True
     empire_config.filter_use = False
-# elif routine == "copula":
-    # TODO
 else: 
     empire_config.moment_matching = False
     empire_config.filter_use = False
 
 # Run script
-for i in range(1,num_instances+1):
+for i in range(1, num_instances + 1):
     run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,

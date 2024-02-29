@@ -5,7 +5,7 @@ from empire.core.config import (EmpireConfiguration, EmpireRunConfiguration,
                                 read_config_file)
 from empire.core.model_runner import run_empire_model
 from empire.logger import get_empire_logger
-from empire.utils import get_run_name
+from empire.utils import get_name_of_last_folder_in_path, get_run_name
 
 parser = ArgumentParser(description="A CLI script to run the Empire model.")
 
@@ -23,6 +23,7 @@ parser.add_argument(
     default="run_in_sample",
 )
 
+parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
 parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/run.yaml")
 
 args = parser.parse_args()
@@ -45,10 +46,10 @@ empire_config.use_fixed_sample = True
 
 # Get all runs
 empire_path = Path.cwd()
-results_path = empire_path / f"Results/{results_dir}/{dataset}"
+results_path = empire_path / f"Results/{results_dir}/dataset_{dataset}"
 all_run_paths = sorted([d for d in results_path.iterdir() if d.is_dir()])
 
-out_of_sample_path = empire_path / f"/OutOfSample/{dataset}"
+out_of_sample_path = empire_path / f"OutOfSample/dataset_{dataset}"
 out_of_sample_tree_paths = sorted([t for t in out_of_sample_path.iterdir() if t.is_dir()])
 
 if len(all_run_paths) == 0:
@@ -62,20 +63,21 @@ run_name = get_run_name(empire_config=empire_config, version=dataset)
 
 break_index = 0
 for run_path in all_run_paths:
-    if break_index == 15:
+    if break_index == 2:
         break
     else:
         break_index += 1
-    for index, tree_path in enumerate(out_of_sample_tree_paths):
+    for tree_path in out_of_sample_tree_paths:
         sample_file_path = tree_path
+        sample_tree = get_name_of_last_folder_in_path(tree_path)
 
         # Set up run config manually to avoid duplicate input files and easier output struct
-        run_name = str(run_path) + f"_out-of-sample_tree{str(index)}"
+        run_name = get_name_of_last_folder_in_path(run_path) + f"_out-of-sample_{sample_tree}"
         dataset_path = run_path / "Input" / "Xlsx"
-
-        # A bit hacky to avoid manual copying scenario files
-        tab_path = scenario_data_path = run_path / "Input" / "Tab"
         results_file_path = run_path / "Output"
+
+        # Workaround to avoid manual copying scenario files
+        tab_path = scenario_data_path = run_path / "Input" / "Tab"
 
         run_config = EmpireRunConfiguration(
                         run_name=run_name,
@@ -96,6 +98,5 @@ for run_path in all_run_paths:
             data_managers=[],
             test_run=False,
             OUT_OF_SAMPLE=True,
-            sample_file_path=sample_file_path,
-            sample_tree=index
+            sample_file_path=sample_file_path
         )

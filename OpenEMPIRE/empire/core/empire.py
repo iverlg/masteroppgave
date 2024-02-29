@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import cloudpickle
+from empire.utils import get_name_of_last_folder_in_path
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import *
 
@@ -19,7 +20,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			   lengthPeakSeason, Period, Operationalhour, Scenario, Season, HoursOfSeason,
 			   discountrate, WACC, LeapYearsInvestment, IAMC_PRINT, WRITE_LP,
 			   PICKLE_INSTANCE, EMISSION_CAP, USE_TEMP_DIR, LOADCHANGEMODULE, OPERATIONAL_DUALS, north_sea, 
-			   OUT_OF_SAMPLE: bool = False, sample_file_path: Path | None = None, sample_tree: int = 0):
+			   OUT_OF_SAMPLE: bool = False, sample_file_path: Path | None = None):
 
 	if USE_TEMP_DIR:
 		TempfileManager.tempdir = temp_dir
@@ -297,11 +298,14 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 	
 	logger.info("Reading parameters for Stochastic...")
 
-	if OUT_OF_SAMPLE and sample_file_path:
-		# Load operational input data EMPIRE has not seen when optimizing (in-sample)
-		data.load(filename=str(sample_file_path / 'Stochastic_HydroGenMaxSeasonalProduction.tab'), param=model.maxRegHydroGenRaw, format="table")
-		data.load(filename=str(sample_file_path / 'Stochastic_StochasticAvailability.tab'), param=model.genCapAvailStochRaw, format="table") 
-		data.load(filename=str(sample_file_path / 'Stochastic_ElectricLoadRaw.tab'), param=model.sloadRaw, format="table")
+	if OUT_OF_SAMPLE:
+		if sample_file_path:
+			# Load operational input data EMPIRE has not seen when optimizing (in-sample)
+			data.load(filename=str(sample_file_path / 'Stochastic_HydroGenMaxSeasonalProduction.tab'), param=model.maxRegHydroGenRaw, format="table")
+			data.load(filename=str(sample_file_path / 'Stochastic_StochasticAvailability.tab'), param=model.genCapAvailStochRaw, format="table") 
+			data.load(filename=str(sample_file_path / 'Stochastic_ElectricLoadRaw.tab'), param=model.sloadRaw, format="table")
+		else:
+			raise ValueError("'OUT_OF_SAMPLE = True' needs to be run with existing 'sample_file_path'")
 	else:
 		data.load(filename=str(tab_file_path / 'Stochastic_HydroGenMaxSeasonalProduction.tab'), param=model.maxRegHydroGenRaw, format="table")
 		data.load(filename=str(tab_file_path / 'Stochastic_StochasticAvailability.tab'), param=model.genCapAvailStochRaw, format="table") 
@@ -522,8 +526,9 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 		data.load(filename=str(result_file_path / 'storPWInstalledCap.tab'), param=model.storPWInstalledCap, format="table")
 		data.load(filename=str(result_file_path / 'storENInstalledCap.tab'), param=model.storENInstalledCap, format="table")
 
-		# Update result_file_path for out_of_sample tree nr.
-		result_file_path += f"OutOfSample/tree{str(sample_tree)}"
+		# Update result_file_path to output for given out_of_sample tree
+		sample_tree = get_name_of_last_folder_in_path(sample_file_path)
+		result_file_path = result_file_path / f"OutOfSample/{sample_tree}"
 		if not os.path.exists(result_file_path):
 			os.makedirs(result_file_path)
 	else:
@@ -812,60 +817,59 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 
 	#import pdb; pdb.set_trace()
 	#instance.CO2price.pprint()
-
-	logger.info("----------------------Problem Statistics---------------------")
-	logger.info("Nodes: %s", len(instance.Node))
-	logger.info("Lines: %s", len(instance.BidirectionalArc))
-	logger.info("")
-	logger.info("GeneratorTypes: %s", len(instance.Generator))
-	logger.info("TotalGenerators: %s", len(instance.GeneratorsOfNode))
-	logger.info("StorageTypes: %s", len(instance.Storage))
-	logger.info("TotalStorages: %s", len(instance.StoragesOfNode))
-	logger.info("")
-	logger.info("InvestmentUntil: %s", value(2020+int(len(instance.PeriodActive)*LeapYearsInvestment)))
-	logger.info("Scenarios: %s", len(instance.Scenario))
-	logger.info("TotalOperationalHoursPerScenario: %s", len(instance.Operationalhour))
-	logger.info("TotalOperationalHoursPerInvYear: %s", len(instance.Operationalhour)*len(instance.Scenario))
-	logger.info("Seasons: %s", len(instance.Season))
-	logger.info("RegularSeasons: %s", len(instance.FirstHoursOfRegSeason))
-	logger.info("LengthRegSeason: %s", value(instance.lengthRegSeason))
-	logger.info("PeakSeasons: %s", len(instance.FirstHoursOfPeakSeason))
-	logger.info("LengthPeakSeason: %s", value(instance.lengthPeakSeason))
-	logger.info("")
-	logger.info("Discount rate: %s", value(instance.discountrate))
-	logger.info("Operational discount scale: %s", value(instance.operationalDiscountrate))
-	logger.info("--------------------------------------------------------------")
-	
-	if WRITE_LP:
-		logger.info("Writing LP-file...")
-		start = time.time()
-		lpstring = f"LP_{name}.lp"
-		if USE_TEMP_DIR:
-			lpstring = temp_dir / lpstring
-		instance.write(str(lpstring), io_options={'symbolic_solver_labels': True})
-		end = time.time()
-		logger.info("Writing LP-file took [sec]: %d", end - start)
-
+	if not OUT_OF_SAMPLE:	
+		logger.info("----------------------Problem Statistics---------------------")
+		logger.info("Nodes: %s", len(instance.Node))
+		logger.info("Lines: %s", len(instance.BidirectionalArc))
+		logger.info("")
+		logger.info("GeneratorTypes: %s", len(instance.Generator))
+		logger.info("TotalGenerators: %s", len(instance.GeneratorsOfNode))
+		logger.info("StorageTypes: %s", len(instance.Storage))
+		logger.info("TotalStorages: %s", len(instance.StoragesOfNode))
+		logger.info("")
+		logger.info("InvestmentUntil: %s", value(2020+int(len(instance.PeriodActive)*LeapYearsInvestment)))
+		logger.info("Scenarios: %s", len(instance.Scenario))
+		logger.info("TotalOperationalHoursPerScenario: %s", len(instance.Operationalhour))
+		logger.info("TotalOperationalHoursPerInvYear: %s", len(instance.Operationalhour)*len(instance.Scenario))
+		logger.info("Seasons: %s", len(instance.Season))
+		logger.info("RegularSeasons: %s", len(instance.FirstHoursOfRegSeason))
+		logger.info("LengthRegSeason: %s", value(instance.lengthRegSeason))
+		logger.info("PeakSeasons: %s", len(instance.FirstHoursOfPeakSeason))
+		logger.info("LengthPeakSeason: %s", value(instance.lengthPeakSeason))
+		logger.info("")
+		logger.info("Discount rate: %s", value(instance.discountrate))
+		logger.info("Operational discount scale: %s", value(instance.operationalDiscountrate))
+		logger.info("--------------------------------------------------------------")
 		
-	# Write marginal costs to results folder
-	f = open(result_file_path / 'marginal_costs.csv', 'w', newline='')
-	writer = csv.writer(f)
-	writer.writerow(["Generator","Period","MarginalCost_EurperMWh"])
-	for g in instance.Generator:
-		for i in instance.PeriodActive:
-			writer.writerow([g, i, value(instance.genMargCost[g,i])])
+		if WRITE_LP:
+			logger.info("Writing LP-file...")
+			start = time.time()
+			lpstring = f"LP_{name}.lp"
+			if USE_TEMP_DIR:
+				lpstring = temp_dir / lpstring
+			instance.write(str(lpstring), io_options={'symbolic_solver_labels': True})
+			end = time.time()
+			logger.info("Writing LP-file took [sec]: %d", end - start)
 
-	f.close()
-	
-	# Write investment costs to results folder
-	f = open(result_file_path / 'investment_costs.csv', 'w', newline='')
-	writer = csv.writer(f)
-	writer.writerow(["Generator","Period","InvestmentCost_EurperMW"])
-	for g in instance.Generator:
-		for i in instance.PeriodActive:
-			writer.writerow([g, i, value(instance.genInvCost[g,i])])
+		# Write marginal costs to results folder
+		f = open(result_file_path / 'marginal_costs.csv', 'w', newline='')
+		writer = csv.writer(f)
+		writer.writerow(["Generator","Period","MarginalCost_EurperMWh"])
+		for g in instance.Generator:
+			for i in instance.PeriodActive:
+				writer.writerow([g, i, value(instance.genMargCost[g,i])])
 
-	f.close()
+		f.close()
+		
+		# Write investment costs to results folder
+		f = open(result_file_path / 'investment_costs.csv', 'w', newline='')
+		writer = csv.writer(f)
+		writer.writerow(["Generator","Period","InvestmentCost_EurperMW"])
+		for g in instance.Generator:
+			for i in instance.PeriodActive:
+				writer.writerow([g, i, value(instance.genInvCost[g,i])])
+
+		f.close()
 
 	logger.info("Solving...")
 
@@ -918,6 +922,10 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 	f = open(result_file_path / 'results_objective.csv', 'w', newline='')
 	writer = csv.writer(f)
 	writer.writerow(["Objective function value:" + str(value(instance.Obj))])
+
+	if OUT_OF_SAMPLE:
+		# Only interested in objective function value
+		return
 
 	f = open(result_file_path / 'results_output_gen.csv', 'w', newline='')
 	writer = csv.writer(f)
@@ -1377,7 +1385,7 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			os.makedirs(result_file_path / 'IAMC')
 		f.to_csv(result_file_path / 'IAMC/empire_iamc.csv', index=None)
 
-	if OPERATIONAL_DUALS:
+	if OPERATIONAL_DUALS and not OUT_OF_SAMPLE:
 		logger.info("Computing operational dual values by fixing investment variables and resolving.")
 
 		logger.info("Fixing investment variables")

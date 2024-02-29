@@ -6,6 +6,8 @@ from pathlib import Path
 from empire.core.config import EmpireConfiguration, read_config_file
 from empire.core.scenario_random import generate_random_scenario
 
+logger = logging.getLogger(__name__)
+
 parser = ArgumentParser(description="A CLI script to run the Empire model.")
 
 parser.add_argument(
@@ -50,12 +52,12 @@ with open(empire_path / "config/countries.json", "r", encoding="utf-8") as file:
 scenario_data_path = empire_path / f"Data handler/{dataset}/ScenarioData"
 
 logging.info(f"Generating out of sample trees for {dataset} ...")
-for n in range(1, num_trees+1):
-    tab_file_path = empire_path / f"OutOfSample/{dataset}/tree{str(n)}"
+for n in range(1, num_trees + 1):
+    tab_file_path = empire_path / f"OutOfSample/dataset_{dataset}/tree{str(n)}"
     generate_random_scenario(
                 empire_config=empire_config,
                 dict_countries=dict_countries,
                 scenario_data_path=scenario_data_path,
                 tab_file_path=tab_file_path,
             )
-    logging.info(f"Done with tree number: {n}")
+    logger.info(f"Done with tree number: {n}")

@@ -20,9 +20,8 @@ def run_empire_model(
     data_managers: list[IDataManager],
     test_run: bool,
     OUT_OF_SAMPLE: bool = False, 
-    sample_file_path: Path | None = None, 
-    sample_tree: int = 0
-):
+    sample_file_path: Path | None = None
+    ):
     for manager in data_managers:
         manager.apply()
 
@@ -147,9 +146,8 @@ def run_empire_model(
             OPERATIONAL_DUALS=empire_config.compute_operational_duals,
             north_sea=empire_config.north_sea,
             OUT_OF_SAMPLE=OUT_OF_SAMPLE, 
-            sample_file_path=sample_file_path, 
-            sample_tree=sample_tree
-        )
+            sample_file_path=sample_file_path
+            )
 
     config_path = run_config.dataset_path / "config.txt"
     logger.info("Writing config to: %s", config_path)
