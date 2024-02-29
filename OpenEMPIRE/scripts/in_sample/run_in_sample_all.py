@@ -15,7 +15,7 @@ parser.add_argument(
 )
 
 parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
-parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/run.yaml")
+parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/aggrun.yaml")
 
 # How many instances to solve to obtain mean and SD
 parser.add_argument("-ni", "--num-instances", help="Number of instances", type=int, default=30)
@@ -24,18 +24,12 @@ args = parser.parse_args()
 dataset=args.dataset
 
 ## Read config and setup folders ##
-if dataset == "test":
-    config = read_config_file(Path("config/testrun.yaml"))
-elif dataset == "europe_agg_v50":
-    config = read_config_file(Path("config/aggrun.yaml"))
-else:
-    config = read_config_file(Path(args.config_file))
-
+config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
 num_instances = args.num_instances
 routines = ["basic", "moment", "filter"]
-tree_sizes = [1, 10, 50, 100]
+tree_sizes = [10, 50, 100]
 
 for ts in tree_sizes:
     for routine in routines: 
@@ -52,6 +46,7 @@ for ts in tree_sizes:
 
         # Modifications to config
         empire_config.use_scenario_generation = True
+        empire_config.use_fixed_sample = False
         empire_config.number_of_scenarios = num_scenarios
 
         if routine == "filter":
@@ -65,7 +60,7 @@ for ts in tree_sizes:
             empire_config.filter_use = False
 
         # Run script
-        for i in range(1,num_instances+1):
+        for i in range(1, num_instances + 1):
             run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,

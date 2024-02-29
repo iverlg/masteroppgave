@@ -15,7 +15,7 @@ parser.add_argument(
 )
 
 parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
-parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/run.yaml")
+parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/aggrun.yaml")
 
 # SGR: 'basic', 'filter', 'moment'
 parser.add_argument("-r", "--routine", help="Scenario generation routine ('basic', 'filter', 'moment')", required=True)
@@ -30,13 +30,7 @@ args = parser.parse_args()
 dataset=args.dataset
 
 ## Read config and setup folders ##
-if dataset == "test":
-    config = read_config_file(Path("config/testrun.yaml"))
-elif dataset == "europe_agg_v50":
-    config = read_config_file(Path("config/aggrun.yaml"))
-else:
-    config = read_config_file(Path(args.config_file))
-
+config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
 routine = args.routine
@@ -54,6 +48,7 @@ else:
 
 # Modifications to config
 empire_config.use_scenario_generation = True
+empire_config.use_fixed_sample = False
 empire_config.number_of_scenarios = num_scenarios
 
 if routine == "filter":

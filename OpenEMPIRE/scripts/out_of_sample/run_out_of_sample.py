@@ -7,6 +7,13 @@ from empire.core.model_runner import run_empire_model
 from empire.logger import get_empire_logger
 from empire.utils import get_name_of_last_folder_in_path, get_run_name
 
+
+###############################################################################
+# Before running this script, you should run these scripts for given dataset: #
+#    1. scripts/in_sample/run_in_sample.py                                    #
+#    2. scripts/out_of_sample/create_out_of_sample_trees.py                   #
+###############################################################################
+
 parser = ArgumentParser(description="A CLI script to run the Empire model.")
 
 parser.add_argument(
@@ -24,20 +31,14 @@ parser.add_argument(
 )
 
 parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
-parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/run.yaml")
+parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/aggrun.yaml")
 
 args = parser.parse_args()
 dataset = args.dataset
 results_dir = args.results_directory
 
 ## Read config and setup folders ##
-if dataset == "test":
-    config = read_config_file(Path("config/testrun.yaml"))
-elif dataset == "europe_agg_v50":
-    config = read_config_file(Path("config/aggrun.yaml"))
-else:
-    config = read_config_file(Path(args.config_file))
-
+config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
 # Modifications to config
@@ -61,12 +62,7 @@ if len(out_of_sample_tree_paths) == 0:
 # Set up run config manually to avoid duplicate input files and easier output struct
 run_name = get_run_name(empire_config=empire_config, version=dataset)
 
-break_index = 0
 for run_path in all_run_paths:
-    if break_index == 2:
-        break
-    else:
-        break_index += 1
     for tree_path in out_of_sample_tree_paths:
         sample_file_path = tree_path
         sample_tree = get_name_of_last_folder_in_path(tree_path)
