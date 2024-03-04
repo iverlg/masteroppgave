@@ -21,8 +21,8 @@ MAPPING = dict({
 })
 
 LOCATION_X = "north"
-LOCATION_Y = "east"
-DF_X = "load"
+LOCATION_Y = "north"
+DF_X = "solar"
 DF_Y = "load"
 N_SCENARIOS = 10
 
@@ -44,7 +44,7 @@ def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, scenario = None, dista
     plt.title(f"Rank scatter: {loc_x}-{loc_y}{('; Distance = '+str(distance)) if distance != None else ''}")
     plt.savefig(f"copula_testing/copula_figs/{'scenario_'+str(scenario) if scenario != None else 'original'}")
 
-def generate_random_scenario() -> list:
+def generate_random_scenario() -> list[int]:
     # Pick random year (1-5)
     sampling_year = np.random.randint(1, 6) #1-5
 
@@ -74,7 +74,7 @@ def generate_random_scenario() -> list:
 
     return sampling_hours
 
-def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list = None) -> pd.DataFrame:
+def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list[int] = None) -> pd.DataFrame:
     _df = df.copy()
     if sampling_hours != None:
         _df = _df.filter(items=sampling_hours, axis=0)
@@ -85,7 +85,7 @@ def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list = None) -> pd.
     _df["rank_value"] = _df["rank"] / len(_df)
     return _df
 
-def generate_copula(df_x: pd.DataFrame, df_y: pd.DataFrame, sampling_hours: list = None) -> pd.DataFrame:
+def generate_copula(df_x: pd.DataFrame, df_y: pd.DataFrame, sampling_hours: list[int] = None) -> pd.DataFrame:
     _df_x = _calculate_rank_values(df_x, sampling_hours)
     _df_y = _calculate_rank_values(df_y, sampling_hours)
     df_copula = pd.DataFrame(index=range(0, len(_df_x)) if sampling_hours == None else sampling_hours)

@@ -27,7 +27,7 @@ parser.add_argument("-ns", "--num-scenarios", help="Number of scenarios/tree siz
 parser.add_argument("-ni", "--num-instances", help="Number of instances", type=int, default=30)
 
 args = parser.parse_args()
-dataset=args.dataset
+dataset = args.dataset
 
 ## Read config and setup folders ##
 config = read_config_file(Path(args.config_file))
@@ -43,23 +43,34 @@ if routine == "moment":
     routine_detail = f"moment{empire_config.n_tree_compare}"
 elif routine == "filter":
     routine_detail = f"filter{empire_config.n_cluster}"
+elif routine == "copula":
+    routine_detail = f"copula{empire_config.n_tree_compare}"
 else:
     routine_detail = "basic"
 
 # Modifications to config
 empire_config.use_scenario_generation = True
 empire_config.use_fixed_sample = False
+empire_config.filter_make = False
 empire_config.number_of_scenarios = num_scenarios
 
 if routine == "filter":
     empire_config.moment_matching = False
     empire_config.filter_use = True
+    empire_config.copula_use = False
 elif routine == "moment":
     empire_config.moment_matching = True
     empire_config.filter_use = False
+    empire_config.copula_use = False
+elif routine == "copula":
+    empire_config.moment_matching = False
+    empire_config.filter_use = False
+    empire_config.copula_use = True
+    empire_config.copula_make = True
 else: 
     empire_config.moment_matching = False
     empire_config.filter_use = False
+    empire_config.copula_use = False
 
 # Run script
 for i in range(1, num_instances + 1):

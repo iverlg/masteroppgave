@@ -28,7 +28,7 @@ config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
 num_instances = args.num_instances
-routines = ["basic", "moment", "filter"]
+routines = ["basic", "moment", "filter", "copula"]
 tree_sizes = [10, 50, 100]
 
 for ts in tree_sizes:
@@ -41,24 +41,34 @@ for ts in tree_sizes:
             routine_detail = f"moment{empire_config.n_tree_compare}"
         elif routine == "filter":
             routine_detail = f"filter{empire_config.n_cluster}"
+        elif routine == "copula":
+            routine_detail = f"copula{empire_config.n_tree_compare}"
         else:
             routine_detail = "basic"
 
         # Modifications to config
         empire_config.use_scenario_generation = True
         empire_config.use_fixed_sample = False
+        empire_config.filter_make = False
         empire_config.number_of_scenarios = num_scenarios
 
         if routine == "filter":
             empire_config.moment_matching = False
             empire_config.filter_use = True
+            empire_config.copula_use = False
         elif routine == "moment":
             empire_config.moment_matching = True
             empire_config.filter_use = False
+            empire_config.copula_use = False
+        elif routine == "copula":
+            empire_config.moment_matching = False
+            empire_config.filter_use = False
+            empire_config.copula_use = True
         else: 
             empire_config.moment_matching = False
             empire_config.filter_use = False
-
+            empire_config.copula_use = False
+            
         # Run script
         for i in range(1, num_instances + 1):
             run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
