@@ -34,10 +34,13 @@ empire_config = EmpireConfiguration.from_dict(config=config)
 # Modifications to config
 empire_config.use_scenario_generation = True
 empire_config.use_fixed_sample = False
-empire_config.number_of_scenarios = 1
+empire_config.number_of_scenarios = 100
 empire_config.moment_matching = False
 empire_config.filter_make = False
 empire_config.filter_use = False
+empire_config.copula_make = False
+empire_config.copula_use = False
+empire_config.copulas_to_use = []
 
 # Paths for scenario generation
 empire_path = Path.cwd()

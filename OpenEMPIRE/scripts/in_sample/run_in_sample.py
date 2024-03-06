@@ -17,7 +17,7 @@ parser.add_argument(
 parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
 parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/aggrun.yaml")
 
-# SGR: 'basic', 'filter', 'moment'
+# SGR: 'basic', 'filter', 'moment', 'copula'
 parser.add_argument("-r", "--routine", help="Scenario generation routine ('basic', 'filter', 'moment')", required=True)
 
 # Tree size
@@ -66,7 +66,6 @@ elif routine == "copula":
     empire_config.moment_matching = False
     empire_config.filter_use = False
     empire_config.copula_use = True
-    empire_config.copula_make = True
 else: 
     empire_config.moment_matching = False
     empire_config.filter_use = False
@@ -74,6 +73,12 @@ else:
 
 # Run script
 for i in range(1, num_instances + 1):
+    if i==1 and (routine == "filter" or routine == "copula"):
+        empire_config.copula_make = True
+        empire_config.filter_make = True
+    else:
+        empire_config.copula_make = False
+        empire_config.filter_make = False
     run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,

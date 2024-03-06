@@ -1,10 +1,7 @@
 import logging
 import os
 import shutil
-import warnings
 from pathlib import Path
-
-warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1059,6 +1056,7 @@ def generate_random_scenario(
                     "windoffshore": "Windoffshore",
                     "windonshore": "Windonshore",
                 })
+                weight_multiplier = len(unique_nodes) - 1 # normalize: num of times each node will appear in copula pair
                 for i in range(len(unique_nodes)):
                     for j in range(i, len(unique_nodes)):
                         n1 = unique_nodes[i]
@@ -1070,9 +1068,15 @@ def generate_random_scenario(
                             if copula == "electricload":
                                 data_x = elecLoad[elecLoad["Node"] == n1][["ElectricLoadRaw_in_MW"]]
                                 data_y = elecLoad[elecLoad["Node"] == n2][["ElectricLoadRaw_in_MW"]]
+                                total_weight = sum(elecLoad["ElectricLoadRaw_in_MW"])
+                                weight = (sum(data_x["ElectricLoadRaw_in_MW"]) + sum(data_y["ElectricLoadRaw_in_MW"]))\
+                                             / (total_weight * weight_multiplier)
                             elif copula == "hydroseasonal":
                                 data_x = hydroSeasonal[hydroSeasonal["Node"] == n1][["HydroGeneratorMaxSeasonalProduction"]]
                                 data_y = hydroSeasonal[hydroSeasonal["Node"] == n2][["HydroGeneratorMaxSeasonalProduction"]]
+                                total_weight = sum(hydroSeasonal["HydroGeneratorMaxSeasonalProduction"])
+                                weight = (sum(data_x["HydroGeneratorMaxSeasonalProduction"]) + sum(data_y["HydroGeneratorMaxSeasonalProduction"]))\
+                                             / (total_weight * weight_multiplier)
                             else:
                                 data_x = genAvail[(genAvail["Node"] == n1) & \
                                                     (genAvail["IntermitentGenerators"] == COPULA_TO_GENERATOR_MAPPING[copula])]\
@@ -1080,6 +1084,7 @@ def generate_random_scenario(
                                 data_y = genAvail[(genAvail["Node"] == n2) & \
                                                     (genAvail["IntermitentGenerators"] == COPULA_TO_GENERATOR_MAPPING[copula])]\
                                                     [["GeneratorStochasticAvailabilityRaw"]]
+                                weight = 1
                             sampled_copula = make_copula(data_x, 
                                                         data_y, 
                                                         filepath=filepath,
@@ -1101,7 +1106,7 @@ def generate_random_scenario(
                                         y_node=n2,
                                         scenario=tree, 
                                         distance=copula_dist) """
-                            score.append(copula_dist)
+                            score.append(copula_dist * weight)
             score_dict[tree] = sum(score)
             # Reset the tree
             genAvail = pd.DataFrame()

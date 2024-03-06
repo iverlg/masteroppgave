@@ -917,10 +917,6 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 	f = open(result_file_path / 'results_objective.csv', 'w', newline='')
 	writer = csv.writer(f)
 	writer.writerow(["Objective function value:" + str(value(instance.Obj))])
-
-	if OUT_OF_SAMPLE:
-		# Only interested in objective function value
-		return float(value(instance.Obj))
 	
 	inv_per = []
 	for i in instance.PeriodActive:
@@ -980,65 +976,68 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			])
 	f.close()
 
-	f = open(result_file_path / 'results_output_transmision_operational.csv', 'w', newline='')
-	writer = csv.writer(f)
-	writer.writerow(["FromNode","ToNode","Period","Season","Scenario","Hour","TransmissionRecieved_MW","Losses_MW"])
-	for (n1,n2) in instance.DirectionalLink:
-		for i in instance.PeriodActive:
-			for (s,h) in instance.HoursOfSeason:
-				for w in instance.Scenario:
-					writer.writerow([
-						n1,
-						n2,
-						inv_per[int(i-1)],
-						s,
-						w,
-						h, 
-						value(instance.lineEfficiency[n1,n2]*instance.transmisionOperational[n1,n2,h,i,w]), 
-						value((1 - instance.lineEfficiency[n1,n2])*instance.transmisionOperational[n1,n2,h,i,w])
-					])
-	f.close()
-	
-	f = open(result_file_path / 'results_output_Operational.csv', 'w', newline='')
-	writer = csv.writer(f)
-	my_header = ["Node","Period","Scenario","Season","Hour","AllGen_MW","Load_MW","Net_load_MW"]
-	for g in instance.Generator:
-		my_string = str(g)+"_MW"
-		my_header.append(my_string)
-	my_header.extend(["storCharge_MW","storDischarge_MW","storEnergyLevel_MWh","LossesChargeDischargeBleed_MW","FlowOut_MW","FlowIn_MW","LossesFlowIn_MW","LoadShed_MW","Price_EURperMWh","AvgCO2_kgCO2perMWh"])    
-	writer.writerow(my_header)
-	for n in instance.Node:
-		for i in instance.PeriodActive:
-			for w in instance.Scenario:
+	if not OUT_OF_SAMPLE:
+		# Not interested in operational-files
+		
+		f = open(result_file_path / 'results_output_transmision_operational.csv', 'w', newline='')
+		writer = csv.writer(f)
+		writer.writerow(["FromNode","ToNode","Period","Season","Scenario","Hour","TransmissionRecieved_MW","Losses_MW"])
+		for (n1,n2) in instance.DirectionalLink:
+			for i in instance.PeriodActive:
 				for (s,h) in instance.HoursOfSeason:
-					my_string=[
-						n,
-						inv_per[int(i-1)],
-						w,
-						s,
-						h, 
-						value(sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)), 
-						value(-instance.sload[n,h,i,w]), 
-						value(-(instance.sload[n,h,i,w] - instance.loadShed[n,h,i,w] + sum(instance.storCharge[n,b,h,i,w] - instance.storageDischargeEff[b]*instance.storDischarge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode) + 
-						sum(instance.transmisionOperational[n,link,h,i,w] - instance.lineEfficiency[link,n]*instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])))
-					]
-					for g in instance.Generator:
-						if (n,g) in instance.GeneratorsOfNode:
-							my_string.append(value(instance.genOperational[n,g,h,i,w]))
-						else:
-							my_string.append(0)
-					my_string.extend([value(sum(-instance.storCharge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
-						value(sum(instance.storDischarge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
-						value(sum(instance.storOperational[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
-						value(sum(-(1 - instance.storageDischargeEff[b])*instance.storDischarge[n,b,h,i,w] - (1 - instance.storageChargeEff[b])*instance.storCharge[n,b,h,i,w] - (1 - instance.storageBleedEff[b])*instance.storOperational[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
-						value(sum(-instance.transmisionOperational[n,link,h,i,w] for link in instance.NodesLinked[n])), 
-						value(sum(instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])), 
-						value(sum(-(1 - instance.lineEfficiency[link,n])*instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])), 
-						value(instance.loadShed[n,h,i,w]), 
-						value(instance.dual[instance.FlowBalance[n,h,i,w]]/(instance.operationalDiscountrate*instance.seasScale[s]*instance.sceProbab[w])),
-						value(sum(instance.genOperational[n,g,h,i,w]*instance.genCO2TypeFactor[g]*(3.6/instance.genEfficiency[g,i]) for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)/sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode) if value(sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)) != 0 else 0)])
-					writer.writerow(my_string)
-	f.close()
+					for w in instance.Scenario:
+						writer.writerow([
+							n1,
+							n2,
+							inv_per[int(i-1)],
+							s,
+							w,
+							h, 
+							value(instance.lineEfficiency[n1,n2]*instance.transmisionOperational[n1,n2,h,i,w]), 
+							value((1 - instance.lineEfficiency[n1,n2])*instance.transmisionOperational[n1,n2,h,i,w])
+						])
+		f.close()
+		
+		f = open(result_file_path / 'results_output_Operational.csv', 'w', newline='')
+		writer = csv.writer(f)
+		my_header = ["Node","Period","Scenario","Season","Hour","AllGen_MW","Load_MW","Net_load_MW"]
+		for g in instance.Generator:
+			my_string = str(g)+"_MW"
+			my_header.append(my_string)
+		my_header.extend(["storCharge_MW","storDischarge_MW","storEnergyLevel_MWh","LossesChargeDischargeBleed_MW","FlowOut_MW","FlowIn_MW","LossesFlowIn_MW","LoadShed_MW","Price_EURperMWh","AvgCO2_kgCO2perMWh"])    
+		writer.writerow(my_header)
+		for n in instance.Node:
+			for i in instance.PeriodActive:
+				for w in instance.Scenario:
+					for (s,h) in instance.HoursOfSeason:
+						my_string=[
+							n,
+							inv_per[int(i-1)],
+							w,
+							s,
+							h, 
+							value(sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)), 
+							value(-instance.sload[n,h,i,w]), 
+							value(-(instance.sload[n,h,i,w] - instance.loadShed[n,h,i,w] + sum(instance.storCharge[n,b,h,i,w] - instance.storageDischargeEff[b]*instance.storDischarge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode) + 
+							sum(instance.transmisionOperational[n,link,h,i,w] - instance.lineEfficiency[link,n]*instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])))
+						]
+						for g in instance.Generator:
+							if (n,g) in instance.GeneratorsOfNode:
+								my_string.append(value(instance.genOperational[n,g,h,i,w]))
+							else:
+								my_string.append(0)
+						my_string.extend([value(sum(-instance.storCharge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
+							value(sum(instance.storDischarge[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
+							value(sum(instance.storOperational[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
+							value(sum(-(1 - instance.storageDischargeEff[b])*instance.storDischarge[n,b,h,i,w] - (1 - instance.storageChargeEff[b])*instance.storCharge[n,b,h,i,w] - (1 - instance.storageBleedEff[b])*instance.storOperational[n,b,h,i,w] for b in instance.Storage if (n,b) in instance.StoragesOfNode)), 
+							value(sum(-instance.transmisionOperational[n,link,h,i,w] for link in instance.NodesLinked[n])), 
+							value(sum(instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])), 
+							value(sum(-(1 - instance.lineEfficiency[link,n])*instance.transmisionOperational[link,n,h,i,w] for link in instance.NodesLinked[n])), 
+							value(instance.loadShed[n,h,i,w]), 
+							value(instance.dual[instance.FlowBalance[n,h,i,w]]/(instance.operationalDiscountrate*instance.seasScale[s]*instance.sceProbab[w])),
+							value(sum(instance.genOperational[n,g,h,i,w]*instance.genCO2TypeFactor[g]*(3.6/instance.genEfficiency[g,i]) for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)/sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode) if value(sum(instance.genOperational[n,g,h,i,w] for g in instance.Generator if (n,g) in instance.GeneratorsOfNode)) != 0 else 0)])
+						writer.writerow(my_string)
+		f.close()
 
 	f = open(result_file_path / 'results_output_curtailed_prod.csv', 'w', newline='')
 	writer = csv.writer(f)
@@ -1176,6 +1175,9 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 			value(sum(instance.discount_multiplier[i]*(instance.storPWInvCap[n,b,i]*instance.storPWInvCost[b,i] + instance.storENInvCap[n,b,i]*instance.storENInvCost[b,i]) for n in instance.Node if (n,b) in instance.StoragesOfNode)), 
 			value(sum(instance.seasScale[s]*instance.sceProbab[w]*instance.storDischarge[n,b,h,i,w]/1000 for n in instance.Node if (n,b) in instance.StoragesOfNode for (s,h) in instance.HoursOfSeason for w in instance.Scenario))])
 	f.close()
+
+	if OUT_OF_SAMPLE:
+		return float(value(instance.Obj))
 
 	# Print first stage decisions for out-of-sample
 	f = open(result_file_path / 'genInvCap.tab', 'w', newline='')
