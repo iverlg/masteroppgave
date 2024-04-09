@@ -51,7 +51,7 @@ scenario_data_path = empire_path / f"Data handler/{dataset}/ScenarioData"
 
 logger.info(f"Generating out of sample trees for {dataset} ...")
 for n in range(1, num_trees + 1):
-    tab_file_path = empire_path / f"OutOfSample/dataset_{dataset}/tree{str(n)}"
+    tab_file_path = empire_path / f"OutOfSample/dataset_{dataset}/testing_tree{str(n)}"
     generate_random_scenario(
                 empire_config=empire_config,
                 dict_countries=dict_countries,
