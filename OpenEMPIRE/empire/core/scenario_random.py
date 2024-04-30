@@ -2,11 +2,13 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from empire.core.config import EmpireConfiguration, EmpireRunConfiguration
+from empire.core.constants import COPULA_TO_GENERATOR_MAPPING
 from scipy.stats import kurtosis, skew, wasserstein_distance
 from sklearn.cluster import KMeans
 
@@ -364,13 +366,37 @@ def make_filter_result(data1, data2, regularSeasonHours, seasons, n_cluster, fil
 def _calculate_rank_values(data: pd.DataFrame) -> pd.DataFrame:
     df = data.copy().reset_index(drop=True)
 
+    df["rank"] = df.rank(method="first")
+
     # Sample and reindex to get random order if tie
-    df["rank"] = df.sample(frac=1).rank(method='first').reindex_like(df) #df["rank"] = df.rank(method="first")
+    # df["rank"] = df.sample(frac=1).rank(method='first').reindex_like(df) #df["rank"] = df.rank(method="first")
 
     # Transform to uniform distribution
     df["rank_value"] = df["rank"] / len(df)
 
     return df
+
+
+def _scale_to_integers(x: float, y: float, scale_factor: int) -> Tuple[int, int]:
+    # Scale the floats to integers within a suitable range
+    scaled_x = int(x * scale_factor)
+    scaled_y = int(y * scale_factor)
+    return scaled_x, scaled_y
+
+
+def _cantor_pairing_function(x: int, y: int) -> int:
+    # Apply the Cantor pairing function to integer inputs; 2D -> 1D (https://en.wikipedia.org/wiki/Pairing_function)
+    return ((x + y) * (x + y + 1)) // 2 + y
+
+
+def _map_to_1d_distribution(x_values: list[int], y_values: list[int], scale_factor: int) -> list[int]:
+    # Map copula distribution from 2D to 1D using Cantor pairing after scaling floats to int
+    mapped_values = []
+    for x, y in zip(x_values, y_values):
+        scaled_x, scaled_y = _scale_to_integers(x, y, scale_factor)
+        mapped_value = _cantor_pairing_function(scaled_x, scaled_y)
+        mapped_values.append(mapped_value)
+    return mapped_values
 
 
 def plot_copula(copula: pd.DataFrame, 
@@ -401,6 +427,7 @@ def plot_copula(copula: pd.DataFrame,
     #plt.show()
     plt.savefig(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}{'_scenario-' + str(scenario) if scenario != None else ''}")
     #plt.close()
+
 
 def make_copula(data_x: pd.DataFrame, 
                 data_y: pd.DataFrame,
@@ -443,26 +470,16 @@ def get_copula(filepath: Path,
                 x_node: str,
                 y_node: str) -> pd.DataFrame:
     return pd.read_csv(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}.csv")
-    
-    
+
+
 def calculate_copula_dist(copula: pd.DataFrame, copula_sample: pd.DataFrame) -> float:
     df_copula = copula.copy()
     df_copula_sample = copula_sample.copy()
 
-    distance = 0
-    for _, row in df_copula_sample.iterrows():
-        sample_x = row["rank_value_x"]
-        sample_y = row["rank_value_y"]
-
-        # Find closest row from "real" copula based on rank_value_x
-        closest_original_row = df_copula.iloc[(df_copula['rank_value_x']-sample_x).abs().argsort()[:1]]
-
-        # Calculate abs distance between sample point and 'closest' point (along x-axis) on original copula
-        distance += (abs(closest_original_row["rank_value_x"].values[0]-sample_x) + \
-                     abs(closest_original_row["rank_value_y"].values[0]-sample_y))
-
-    return distance
-
+    copula_1d = _map_to_1d_distribution(df_copula["rank_value_x"], df_copula["rank_value_y"], 10000)
+    copula_sample_1d = _map_to_1d_distribution(df_copula_sample["rank_value_x"], df_copula_sample["rank_value_y"], 10000)
+    ws_dist = wasserstein_distance(copula_1d, copula_sample_1d)
+    return ws_dist
 
 def generate_random_scenario(
     empire_config: EmpireConfiguration,
@@ -1050,12 +1067,6 @@ def generate_random_scenario(
                         relkurtdist = abs((samplekurt - truekurt[s + c]) / truekurt[s + c])
                         score.append(weight[s + c] * (relmeandist + relvardist + relskewdist + relkurtdist))
             elif copula_use:
-                COPULA_TO_GENERATOR_MAPPING = dict({
-                    "hydroror": "Hydrorun-of-the-river",
-                    "solar": "Solar",
-                    "windoffshore": "Windoffshore",
-                    "windonshore": "Windonshore",
-                })
                 weight_multiplier = len(unique_nodes) - 1 # normalize: num of times each node will appear in copula pair
                 for i in range(len(unique_nodes)):
                     for j in range(i, len(unique_nodes)):

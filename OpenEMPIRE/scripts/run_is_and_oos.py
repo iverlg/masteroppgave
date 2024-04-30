@@ -21,7 +21,7 @@ parser.add_argument(
     "-rdir",
     "--results-directory",
     help="Specify the results directory for in sample runs",
-    default="run_in_sample",
+    default="run_in_sample_new",
 )
 
 # SGR: 'basic', 'filter', 'moment', 'copula'
@@ -84,13 +84,13 @@ for ts in tree_sizes:
         
     # Run script
     for i in range(1, num_instances + 1):
-        if i==1 and (routine == "filter" or routine == "copula"):
+         if i==1 and (routine == "filter" or routine == "copula"):
             empire_config.copula_make = True
             empire_config.filter_make = True
         else:
             empire_config.copula_make = False
             empire_config.filter_make = False
-        run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
+        run_path = Path.cwd() / "Results/run_in_sample_new/dataset_{ds}/{r}_sce{ns}_{i}".format(
             ds=dataset,
             r=routine_detail,
             ns=num_scenarios,
@@ -119,7 +119,7 @@ empire_path = Path.cwd()
 results_path = empire_path / f"Results/{results_dir}/dataset_{dataset}"
 all_run_paths = sorted([d for d in results_path.iterdir() if d.is_dir()])
 
-out_of_sample_path = empire_path / f"OutOfSample/dataset_{dataset}"
+out_of_sample_path = empire_path / f"OutOfSample/dataset_{dataset}/new"
 out_of_sample_tree_paths = sorted([t for t in out_of_sample_path.iterdir() if t.is_dir()])
 
 if len(all_run_paths) == 0:

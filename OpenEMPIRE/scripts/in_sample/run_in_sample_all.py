@@ -71,7 +71,7 @@ for ts in tree_sizes:
             
         # Run script
         for i in range(1, num_instances + 1):
-            run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
+            run_path = Path.cwd() / "Results/run_in_sample_new/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,
                 ns=num_scenarios,

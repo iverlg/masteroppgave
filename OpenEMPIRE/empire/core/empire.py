@@ -1039,6 +1039,27 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 						writer.writerow(my_string)
 		f.close()
 
+		f = open(result_file_path / 'results_output_curtailed_operational.csv', 'w', newline='')
+		writer = csv.writer(f)
+		writer.writerow(["Node", "Period", "Scenario", "Season", "Hour", "RESGeneratorType", "Curtailment_MWh"])
+		for t in instance.Technology:
+			if t == 'Hydro_ror' or t == 'Wind_onshr' or t == 'Wind_offshr' or t == 'Solar':
+				for (n,g) in instance.GeneratorsOfNode:
+					if (t,g) in instance.GeneratorsOfTechnology: 
+						for i in instance.PeriodActive:
+							for w in instance.Scenario:
+								for (s,h) in instance.HoursOfSeason:
+									writer.writerow([
+										n,
+										inv_per[int(i-1)],
+										w,
+										s,
+										h,
+										g,
+										value(instance.sceProbab[w]*instance.seasScale[s]*(instance.genCapAvail[n,g,h,w,i]*instance.genInstalledCap[n,g,i] - instance.genOperational[n,g,h,i,w]))
+									])
+		f.close()
+
 	f = open(result_file_path / 'results_output_curtailed_prod.csv', 'w', newline='')
 	writer = csv.writer(f)
 	writer.writerow(["Node","RESGeneratorType","Period","ExpectedAnnualCurtailment_GWh"])
@@ -1053,27 +1074,6 @@ def run_empire(name, tab_file_path: Path, result_file_path: Path, scenario_data_
 							inv_per[int(i-1)], 
 							value(sum(instance.sceProbab[w]*instance.seasScale[s]*(instance.genCapAvail[n,g,h,w,i]*instance.genInstalledCap[n,g,i] - instance.genOperational[n,g,h,i,w])/1000 for w in instance.Scenario for (s,h) in instance.HoursOfSeason))
 						])
-	f.close()
-
-	f = open(result_file_path / 'results_output_curtailed_operational.csv', 'w', newline='')
-	writer = csv.writer(f)
-	writer.writerow(["Node", "Period", "Scenario", "Season", "Hour", "RESGeneratorType", "Curtailment_MWh"])
-	for t in instance.Technology:
-		if t == 'Hydro_ror' or t == 'Wind_onshr' or t == 'Wind_offshr' or t == 'Solar':
-			for (n,g) in instance.GeneratorsOfNode:
-				if (t,g) in instance.GeneratorsOfTechnology: 
-					for i in instance.PeriodActive:
-						for w in instance.Scenario:
-							for (s,h) in instance.HoursOfSeason:
-								writer.writerow([
-									n,
-									inv_per[int(i-1)],
-									w,
-									s,
-									h,
-									g,
-									value(instance.sceProbab[w]*instance.seasScale[s]*(instance.genCapAvail[n,g,h,w,i]*instance.genInstalledCap[n,g,i] - instance.genOperational[n,g,h,i,w]))
-								])
 	f.close()
 
 	f = open(result_file_path / 'results_output_EuropePlot.csv', 'w', newline='')
