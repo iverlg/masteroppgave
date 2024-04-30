@@ -21,7 +21,9 @@ parser.add_argument("-c", "--config-file", help="Path to config file.", default=
 args = parser.parse_args()
 
 ## Read config and setup folders ##
-if args.dataset == "test":
+if args.config_file != "config/run.yaml":
+    config = read_config_file(Path(args.config_file))
+elif args.dataset == "test":
     config = read_config_file(Path("config/testrun.yaml"))
 elif args.dataset == "europe_agg_v50":
     config = read_config_file(Path("config/aggrun.yaml"))

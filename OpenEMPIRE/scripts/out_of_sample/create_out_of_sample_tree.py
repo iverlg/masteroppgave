@@ -6,6 +6,8 @@ from pathlib import Path
 from empire.core.config import EmpireConfiguration, read_config_file
 from empire.core.scenario_random import generate_random_scenario
 
+### INACTIVE: OOS-tree has been made manually to avoid duplicate scenarios ### 
+
 logger = logging.getLogger(__name__)
 
 parser = ArgumentParser(description="A CLI script to run the Empire model.")
@@ -34,10 +36,13 @@ empire_config = EmpireConfiguration.from_dict(config=config)
 # Modifications to config
 empire_config.use_scenario_generation = True
 empire_config.use_fixed_sample = False
-empire_config.number_of_scenarios = 1
+empire_config.number_of_scenarios = 60
 empire_config.moment_matching = False
 empire_config.filter_make = False
 empire_config.filter_use = False
+empire_config.copula_make = False
+empire_config.copula_use = False
+empire_config.copulas_to_use = []
 
 # Paths for scenario generation
 empire_path = Path.cwd()
@@ -48,7 +53,7 @@ scenario_data_path = empire_path / f"Data handler/{dataset}/ScenarioData"
 
 logger.info(f"Generating out of sample trees for {dataset} ...")
 for n in range(1, num_trees + 1):
-    tab_file_path = empire_path / f"OutOfSample/dataset_{dataset}/tree{str(n)}"
+    tab_file_path = empire_path / f"OutOfSample/dataset_{dataset}/oos_tree{str(n)}"
     generate_random_scenario(
                 empire_config=empire_config,
                 dict_countries=dict_countries,

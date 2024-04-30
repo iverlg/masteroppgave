@@ -1,6 +1,7 @@
 import pandas as pd 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import wasserstein_distance
 
 AGGR = True
 
@@ -21,10 +22,28 @@ MAPPING = dict({
 })
 
 LOCATION_X = "north"
-LOCATION_Y = "east"
+LOCATION_Y = "west"
 DF_X = "load"
 DF_Y = "load"
-N_SCENARIOS = 10
+N_SCENARIOS = 50
+
+def scale_to_integers(x, y, scale_factor):
+    # Scale the real numbers to integers within a suitable range
+    scaled_x = int(x * scale_factor)
+    scaled_y = int(y * scale_factor)
+    return scaled_x, scaled_y
+
+def cantor_pairing_function(x, y):
+    # Apply the Cantor pairing function to integer inputs; 2D -> 1D
+    return ((x + y) * (x + y + 1)) // 2 + y
+
+def map_to_1d_distribution(x_values, y_values, scale_factor):
+    mapped_values = []
+    for x, y in zip(x_values, y_values):
+        scaled_x, scaled_y = scale_to_integers(x, y, scale_factor)
+        mapped_value = cantor_pairing_function(scaled_x, scaled_y)
+        mapped_values.append(mapped_value)
+    return mapped_values
 
 def remove_time_and_filter_location(df: pd.DataFrame, location: str) -> pd.DataFrame:
     _df = df.copy()
@@ -44,7 +63,7 @@ def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, scenario = None, dista
     plt.title(f"Rank scatter: {loc_x}-{loc_y}{('; Distance = '+str(distance)) if distance != None else ''}")
     plt.savefig(f"copula_testing/copula_figs/{'scenario_'+str(scenario) if scenario != None else 'original'}")
 
-def generate_random_scenario() -> list:
+def generate_random_scenario() -> list[int]:
     # Pick random year (1-5)
     sampling_year = np.random.randint(1, 6) #1-5
 
@@ -74,18 +93,18 @@ def generate_random_scenario() -> list:
 
     return sampling_hours
 
-def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list = None) -> pd.DataFrame:
+def _calculate_rank_values(df: pd.DataFrame, sampling_hours: list[int] = None) -> pd.DataFrame:
     _df = df.copy()
     if sampling_hours != None:
         _df = _df.filter(items=sampling_hours, axis=0)
 
-    #_df["rank"] = _df.rank(method="first")
+    _df["rank"] = _df.rank(method="first")
     # Sample and reindex to get random order if tie
-    _df["rank"] = _df.sample(frac=1).rank(method='first').reindex_like(_df)
+    #_df["rank"] = _df.sample(frac=1).rank(method='first').reindex_like(_df)
     _df["rank_value"] = _df["rank"] / len(_df)
     return _df
 
-def generate_copula(df_x: pd.DataFrame, df_y: pd.DataFrame, sampling_hours: list = None) -> pd.DataFrame:
+def generate_copula(df_x: pd.DataFrame, df_y: pd.DataFrame, sampling_hours: list[int] = None) -> pd.DataFrame:
     _df_x = _calculate_rank_values(df_x, sampling_hours)
     _df_y = _calculate_rank_values(df_y, sampling_hours)
     df_copula = pd.DataFrame(index=range(0, len(_df_x)) if sampling_hours == None else sampling_hours)
@@ -94,6 +113,15 @@ def generate_copula(df_x: pd.DataFrame, df_y: pd.DataFrame, sampling_hours: list
     return df_copula
 
 def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) -> float:
+    _df_copula = df_copula.copy()
+    _df_copula_sample = df_copula_sample.copy()
+
+    copula_1d = map_to_1d_distribution(_df_copula["rank_value_x"], _df_copula["rank_value_y"], 10000)
+    copula_sample_1d = map_to_1d_distribution(_df_copula_sample["rank_value_x"], _df_copula_sample["rank_value_y"], 10000)
+    ws_dist = wasserstein_distance(copula_1d, copula_sample_1d)
+    return ws_dist
+
+""" def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) -> float:
     _df_copula = df_copula.copy()
     _df_copula_sample = df_copula_sample.copy()
 
@@ -109,7 +137,7 @@ def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) 
         distance += (abs(closest_original_row["rank_value_x"].values[0]-sample_x) + \
                      abs(closest_original_row["rank_value_y"].values[0]-sample_y))
 
-    return distance
+    return distance """
 
 def main():
     loc_x = LOCATION_X

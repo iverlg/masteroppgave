@@ -2,14 +2,15 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from empire.core.config import EmpireConfiguration, EmpireRunConfiguration
+from empire.core.constants import COPULA_TO_GENERATOR_MAPPING
 from scipy.stats import kurtosis, skew, wasserstein_distance
 from sklearn.cluster import KMeans
-
-from empire.core.config import EmpireConfiguration, EmpireRunConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -362,6 +363,124 @@ def make_filter_result(data1, data2, regularSeasonHours, seasons, n_cluster, fil
     filter_result.to_csv(filepath / "filter_result.csv", index=False)
 
 
+def _calculate_rank_values(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy().reset_index(drop=True)
+
+    df["rank"] = df.rank(method="first")
+
+    # Sample and reindex to get random order if tie
+    # df["rank"] = df.sample(frac=1).rank(method='first').reindex_like(df) #df["rank"] = df.rank(method="first")
+
+    # Transform to uniform distribution
+    df["rank_value"] = df["rank"] / len(df)
+
+    return df
+
+
+def _scale_to_integers(x: float, y: float, scale_factor: int) -> Tuple[int, int]:
+    # Scale the floats to integers within a suitable range
+    scaled_x = int(x * scale_factor)
+    scaled_y = int(y * scale_factor)
+    return scaled_x, scaled_y
+
+
+def _cantor_pairing_function(x: int, y: int) -> int:
+    # Apply the Cantor pairing function to integer inputs; 2D -> 1D (https://en.wikipedia.org/wiki/Pairing_function)
+    return ((x + y) * (x + y + 1)) // 2 + y
+
+
+def _map_to_1d_distribution(x_values: list[int], y_values: list[int], scale_factor: int) -> list[int]:
+    # Map copula distribution from 2D to 1D using Cantor pairing after scaling floats to int
+    mapped_values = []
+    for x, y in zip(x_values, y_values):
+        scaled_x, scaled_y = _scale_to_integers(x, y, scale_factor)
+        mapped_value = _cantor_pairing_function(scaled_x, scaled_y)
+        mapped_values.append(mapped_value)
+    return mapped_values
+
+
+def plot_copula(copula: pd.DataFrame, 
+                filepath: Path,
+                x_descr: str,
+                y_descr: str,
+                x_node: str, 
+                y_node: str, 
+                scenario: int = None, 
+                distance: float = None) -> None:
+    df_copula = copula.copy()
+    x = df_copula["rank_value_x"]
+    y = df_copula["rank_value_y"]
+
+    plt.figure(figsize=(8,6))
+    plt.scatter(x, y, color="blue", s=0.2)
+    plt.xlabel(f"{x_descr} {x_node}, {'scenario '+str(scenario) if scenario else 'original'}")
+    plt.ylabel(f"{y_descr} {y_node}, {'scenario '+str(scenario) if scenario else 'original'}")
+    plt.title(f"Rank scatter: {x_node}-{y_node}{('; Distance = ' + str(round(distance, 3))) if distance != None else ''}")
+
+    filepath = filepath / "Plots"
+    if scenario != None:
+        filepath = filepath / "Scenarios"
+
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    
+    #plt.show()
+    plt.savefig(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}{'_scenario-' + str(scenario) if scenario != None else ''}")
+    #plt.close()
+
+
+def make_copula(data_x: pd.DataFrame, 
+                data_y: pd.DataFrame,
+                filepath: Path = None,
+                x_descr: str = None,
+                y_descr: str = None,
+                x_node: str = None,
+                y_node: str = None,
+                save_df: bool = False,
+                save_fig: bool = False
+                ) -> pd.DataFrame:
+    # Calculate rank values (transformed to uniform distribution)
+    df_x = _calculate_rank_values(data_x)
+    df_y = _calculate_rank_values(data_y)
+
+    # Create copula
+    df_copula = pd.DataFrame(index=range(0, len(df_x)))
+    df_copula["rank_value_x"] = df_copula.join(df_x)[["rank_value"]]
+    df_copula["rank_value_y"] = df_copula.join(df_y)[["rank_value"]]
+
+    # Save copula
+    if filepath: 
+        if not (x_node and y_node and x_descr and y_descr):
+            raise ValueError("Copula needs to be saved with node and data description for x- and y-values")
+        
+        if save_df:
+            if not os.path.exists(filepath):
+                os.makedirs(filepath)
+            df_copula.to_csv(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}.csv")
+
+        if save_fig:
+            plot_copula(df_copula, filepath, x_descr, y_descr, x_node, y_node)
+
+    return df_copula
+
+
+def get_copula(filepath: Path,
+                x_descr: str,
+                y_descr: str,
+                x_node: str,
+                y_node: str) -> pd.DataFrame:
+    return pd.read_csv(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}.csv")
+
+
+def calculate_copula_dist(copula: pd.DataFrame, copula_sample: pd.DataFrame) -> float:
+    df_copula = copula.copy()
+    df_copula_sample = copula_sample.copy()
+
+    copula_1d = _map_to_1d_distribution(df_copula["rank_value_x"], df_copula["rank_value_y"], 10000)
+    copula_sample_1d = _map_to_1d_distribution(df_copula_sample["rank_value_x"], df_copula_sample["rank_value_y"], 10000)
+    ws_dist = wasserstein_distance(copula_1d, copula_sample_1d)
+    return ws_dist
+
 def generate_random_scenario(
     empire_config: EmpireConfiguration,
     dict_countries: dict,
@@ -387,6 +506,9 @@ def generate_random_scenario(
     LOADCHANGEMODULE = empire_config.load_change_module
     filter_make = empire_config.filter_make
     filter_use = empire_config.filter_use
+    copula_make = empire_config.copula_make
+    copula_use = empire_config.copula_use
+    copulas_to_use = empire_config.copulas_to_use
     n_cluster = empire_config.n_cluster
     moment_matching = empire_config.moment_matching
     n_tree_compare = empire_config.n_tree_compare
@@ -411,6 +533,9 @@ def generate_random_scenario(
     hydroror_data = pd.read_csv(scenario_data_path / "hydroror.csv")
     hydroseasonal_data = pd.read_csv(scenario_data_path / "hydroseasonal.csv")
     electricload_data = pd.read_csv(scenario_data_path / "electricload.csv")
+
+    # Unique nodes; for copula-based SGR
+    unique_nodes = [col for col in solar_data.columns if col != "time"]
 
     if LOADCHANGEMODULE:
         elecLoadMod_data = pd.read_csv(scenario_data_path / "LoadchangeModule/elec_load_mod.csv")
@@ -438,27 +563,58 @@ def generate_random_scenario(
         filter_result = pd.read_csv(scenario_data_path / "filter_result.csv")
         cluster = n_cluster - 1
 
-    if moment_matching:
+    if copula_make: 
+        COPULA_TO_DF_MAPPING = dict({
+            "electricload": electricload_data,
+            "solar": solar_data,
+            "windonshore": windonshore_data,
+            "windoffshore": windoffshore_data,
+            "hydroror": hydroror_data,
+            "hydroseasonal": hydroseasonal_data,
+        })
+        for copula in copulas_to_use:
+            filepath = Path.cwd() / "Copulas" / copula
+            for i in range(len(unique_nodes)):
+                for j in range(i, len(unique_nodes)):
+                    n1 = unique_nodes[i]
+                    n2 = unique_nodes[j]
+                    if n1==n2: 
+                        continue
+                    data_x = COPULA_TO_DF_MAPPING[copula][[n1]]
+                    data_y = COPULA_TO_DF_MAPPING[copula][[n2]]
+                    make_copula(data_x, 
+                                data_y, 
+                                filepath=filepath,
+                                x_descr=copula,
+                                y_descr=copula,
+                                x_node=n1,
+                                y_node=n2,
+                                save_df=True,
+                                save_fig=True)
+
+    if moment_matching or copula_use:
         genAvail_dict = {}
         elecLoad_dict = {}
         hydroSeasonal_dict = {}
         score_dict = {}
-        seasonmeansum = {}
-        truemean = {}
-        truevar = {}
-        trueskew = {}
-        truekurt = {}
-        weight = {}
-        for s in seasons:
-            es = electricload_data.loc[electricload_data.month.isin(season_month(s))]
-            es = remove_time_index(es)
-            seasonmeansum[s] = sum(np.mean(es[c]) for c in es.columns)
-            for c in es.columns:
-                truemean[s + c] = np.mean(es[c])  # M1
-                truevar[s + c] = np.var(es[c])  # M2
-                trueskew[s + c] = skew(es[c])  # M3
-                truekurt[s + c] = kurtosis(es[c])  # M4
-                weight[s + c] = truemean[s + c] / seasonmeansum[s]
+
+        if moment_matching:
+            seasonmeansum = {}
+            truemean = {}
+            truevar = {}
+            trueskew = {}
+            truekurt = {}
+            weight = {}
+            for s in seasons:
+                es = electricload_data.loc[electricload_data.month.isin(season_month(s))]
+                es = remove_time_index(es)
+                seasonmeansum[s] = sum(np.mean(es[c]) for c in es.columns)
+                for c in es.columns:
+                    truemean[s + c] = np.mean(es[c])  # M1
+                    truevar[s + c] = np.var(es[c])  # M2
+                    trueskew[s + c] = skew(es[c])  # M3
+                    truekurt[s + c] = kurtosis(es[c])  # M4
+                    weight[s + c] = truemean[s + c] / seasonmeansum[s]
     else:
         n_tree_compare = 1
 
@@ -884,38 +1040,91 @@ def generate_random_scenario(
                         ignore_index=True,
                     )
 
-        if moment_matching:
+        if moment_matching or copula_use:
             # Save the tree
             genAvail_dict[tree] = genAvail
             elecLoad_dict[tree] = elecLoad
             hydroSeasonal_dict[tree] = hydroSeasonal
             # Calculate the tree score
             score = []
-            for s in seasons:
-                hours = list(
-                    range(
-                        1 + len_of_regular_season * seasons.index(s), len_of_regular_season * (seasons.index(s) + 1) + 1
+            if moment_matching:
+                for s in seasons:
+                    hours = list(
+                        range(
+                            1 + len_of_regular_season * seasons.index(s), len_of_regular_season * (seasons.index(s) + 1) + 1
+                        )
                     )
-                )
-                es = elecLoad.loc[elecLoad.Operationalhour.isin(hours)]
-                for c in es.Node.unique():
-                    es_c = es.loc[es.Node.isin([c])]
-                    samplemean = np.mean(es_c["ElectricLoadRaw_in_MW"])  # M1
-                    samplevar = np.var(es_c["ElectricLoadRaw_in_MW"])  # M2
-                    sampleskew = skew(es_c["ElectricLoadRaw_in_MW"])  # M3
-                    samplekurt = kurtosis(es_c["ElectricLoadRaw_in_MW"])  # M4
-                    relmeandist = abs((samplemean - truemean[s + c]) / truemean[s + c])
-                    relvardist = abs((samplevar - truevar[s + c]) / truevar[s + c])
-                    relskewdist = abs((sampleskew - trueskew[s + c]) / trueskew[s + c])
-                    relkurtdist = abs((samplekurt - truekurt[s + c]) / truekurt[s + c])
-                    score.append(weight[s + c] * (relmeandist + relvardist + relskewdist + relkurtdist))
+                    es = elecLoad.loc[elecLoad.Operationalhour.isin(hours)]
+                    for c in es.Node.unique():
+                        es_c = es.loc[es.Node.isin([c])]
+                        samplemean = np.mean(es_c["ElectricLoadRaw_in_MW"])  # M1
+                        samplevar = np.var(es_c["ElectricLoadRaw_in_MW"])  # M2
+                        sampleskew = skew(es_c["ElectricLoadRaw_in_MW"])  # M3
+                        samplekurt = kurtosis(es_c["ElectricLoadRaw_in_MW"])  # M4
+                        relmeandist = abs((samplemean - truemean[s + c]) / truemean[s + c])
+                        relvardist = abs((samplevar - truevar[s + c]) / truevar[s + c])
+                        relskewdist = abs((sampleskew - trueskew[s + c]) / trueskew[s + c])
+                        relkurtdist = abs((samplekurt - truekurt[s + c]) / truekurt[s + c])
+                        score.append(weight[s + c] * (relmeandist + relvardist + relskewdist + relkurtdist))
+            elif copula_use:
+                weight_multiplier = len(unique_nodes) - 1 # normalize: num of times each node will appear in copula pair
+                for i in range(len(unique_nodes)):
+                    for j in range(i, len(unique_nodes)):
+                        n1 = unique_nodes[i]
+                        n2 = unique_nodes[j]
+                        if n1==n2: 
+                             continue
+                        for copula in copulas_to_use:
+                            filepath = Path.cwd() / "Copulas" / copula
+                            if copula == "electricload":
+                                data_x = elecLoad[elecLoad["Node"] == n1][["ElectricLoadRaw_in_MW"]]
+                                data_y = elecLoad[elecLoad["Node"] == n2][["ElectricLoadRaw_in_MW"]]
+                                total_weight = sum(elecLoad["ElectricLoadRaw_in_MW"])
+                                weight = (sum(data_x["ElectricLoadRaw_in_MW"]) + sum(data_y["ElectricLoadRaw_in_MW"]))\
+                                             / (total_weight * weight_multiplier)
+                            elif copula == "hydroseasonal":
+                                data_x = hydroSeasonal[hydroSeasonal["Node"] == n1][["HydroGeneratorMaxSeasonalProduction"]]
+                                data_y = hydroSeasonal[hydroSeasonal["Node"] == n2][["HydroGeneratorMaxSeasonalProduction"]]
+                                total_weight = sum(hydroSeasonal["HydroGeneratorMaxSeasonalProduction"])
+                                weight = (sum(data_x["HydroGeneratorMaxSeasonalProduction"]) + sum(data_y["HydroGeneratorMaxSeasonalProduction"]))\
+                                             / (total_weight * weight_multiplier)
+                            else:
+                                data_x = genAvail[(genAvail["Node"] == n1) & \
+                                                    (genAvail["IntermitentGenerators"] == COPULA_TO_GENERATOR_MAPPING[copula])]\
+                                                    [["GeneratorStochasticAvailabilityRaw"]]
+                                data_y = genAvail[(genAvail["Node"] == n2) & \
+                                                    (genAvail["IntermitentGenerators"] == COPULA_TO_GENERATOR_MAPPING[copula])]\
+                                                    [["GeneratorStochasticAvailabilityRaw"]]
+                                weight = 1
+                            sampled_copula = make_copula(data_x, 
+                                                        data_y, 
+                                                        filepath=filepath,
+                                                        x_descr=copula,
+                                                        y_descr=copula,
+                                                        x_node=n1,
+                                                        y_node=n2)
+                            real_copula = get_copula(filepath=filepath,
+                                                        x_descr=copula,
+                                                        y_descr=copula,
+                                                        x_node=n1,
+                                                        y_node=n2)
+                            copula_dist = calculate_copula_dist(real_copula, sampled_copula)
+                            """ plot_copula(copula=sampled_copula,
+                                        filepath=filepath,
+                                        x_descr=copula,
+                                        y_descr=copula,
+                                        x_node=n1,
+                                        y_node=n2,
+                                        scenario=tree, 
+                                        distance=copula_dist) """
+                            score.append(copula_dist * weight)
             score_dict[tree] = sum(score)
             # Reset the tree
             genAvail = pd.DataFrame()
             elecLoad = pd.DataFrame()
             hydroSeasonal = pd.DataFrame()
 
-    if moment_matching:
+    if moment_matching or copula_use:
         min_tree_key = min(score_dict, key=score_dict.get)
         genAvail = genAvail_dict[min_tree_key]
         elecLoad = elecLoad_dict[min_tree_key]

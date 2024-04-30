@@ -17,15 +17,6 @@ parser.add_argument(
 parser.add_argument("-f", "--force", help="Force new run if old exist.", action="store_true")
 parser.add_argument("-c", "--config-file", help="Path to config file.", default="config/aggrun.yaml")
 
-# SGR: 'basic', 'filter', 'moment', 'copula'
-parser.add_argument("-r", "--routine", help="Scenario generation routine ('basic', 'filter', 'moment', 'copula')", required=True)
-
-# Tree size
-parser.add_argument("-ns", "--num-scenarios", help="Number of scenarios/tree size", type=int, required=True)
-
-# How many instances to solve to obtain mean and SD
-parser.add_argument("-ni", "--num-instances", help="Number of instances", type=int, default=30)
-
 args = parser.parse_args()
 dataset = args.dataset
 
@@ -33,9 +24,10 @@ dataset = args.dataset
 config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
-routine = args.routine
-num_scenarios = args.num_scenarios
-num_instances = args.num_instances
+routine = "basic"
+num_scenarios = 10
+num_instances = 30
+start_instance = 1
 
 # For SGR routines add extra detail to output-folder / name
 routine_detail = ""
@@ -73,8 +65,8 @@ else:
     empire_config.copula_use = False
 
 # Run script
-for i in range(1, num_instances + 1):
-    
+for i in range(start_instance, start_instance + num_instances):
+
     run_path = Path.cwd() / "Results/run_in_sample_new/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,

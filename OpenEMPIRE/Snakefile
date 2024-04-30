@@ -1,0 +1,73 @@
+# Snakefile
+
+import itertools
+import pandas as pd
+from pathlib import Path
+
+EMPIRE_PATH = Path("../OpenEMPIRE")
+
+# Define parameters
+parameters = {
+    "routines": ["copula"], # ["basic", "moment", "filter", "copula"], # list[str]
+    "num_scenarios": [1, 10, 50, 100], # int
+    "num_instances": [30], # int 
+    "trees": ["tree" + str(i) for i in range(1, 601)] #int
+}
+
+# Generate combinations of parameters
+cases = list(itertools.product(*parameters.values()))
+
+# Rule for running the script
+rule all:
+    input:
+        expand(EMPIRE_PATH/"Results/run_in_sample/dataset_europe_agg_v50/{r}20_sce{ns}_{ni}/.done", 
+               r=[p[0] for p in cases], 
+               ns=[p[1] for p in cases], 
+               ni=[p[2] for p in cases],
+               tree=[p[3] for p in cases])
+
+# Rule for running in-sample
+rule run_in_sample:
+    output:
+        EMPIRE_PATH/"Results/run_in_sample/dataset_europe_agg_v50/{r}20_sce{ns}_{ni}/.done"
+    params:
+        r="{r}",
+        ns="{ns}",
+        ni="{ni}",
+    log:
+        "logs/in_sample_{r}20_sce{ns}_{ni}.log"
+    shell:
+        "python -m scripts.in_sample.run_in_sample -r {params.r} -ns {params.ns} -ni {params.ni}"
+
+# Rule for running out-of-sample
+rule run_out_of_sample:
+    input:
+        lambda wildcards: expand(EMPIRE_PATH/"Results/run_in_sample/dataset_europe_agg_v50/{r}20_sce{ns}_{ni}/.done", 
+                                 r=wildcards.r, 
+                                 ns=wildcards.ns, 
+                                 ni=wildcards.ni)
+    output:
+        EMPIRE_PATH/"Results/run_in_sample/dataset_europe_agg_v50/{r}20_sce{ns}_{ni}/Output/OutOfSample/{tree}/.done"
+    params:
+        r="{r}",
+        ns="{ns}",
+        ni="{ni}",
+        tree="{tree}",
+    log:
+        "logs/{r}20_sce{ns}_{ni}_out_of_sample_{tree}.log"
+    shell:
+        "python -m scripts.out_of_sample.run_out_of_sample"
+
+# Rule for creating DAG
+rule dag:
+    message:
+        "Creating DAG of workflow."
+    output:
+        dot="dag.dot",
+        pdf="dag.pdf",
+        png="dag.png",
+    shell:
+        """
+        snakemake --dag all | dot -Tpdf -o {output.pdf} {output.dot}
+        dot -Tpng -o {output.png} {output.dot}
+        """
