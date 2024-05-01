@@ -340,6 +340,92 @@ def make_mean(data, regularSeasonHours, seasons):
                 ws = pd.concat([ws, df], ignore_index=True)
     return ws
 
+def _calculate_rank_values(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy().reset_index(drop=True)
+
+    df["rank"] = df.rank(method="first")
+
+    # Sample and reindex to get random order if tie
+    # df["rank"] = df.sample(frac=1).rank(method='first').reindex_like(df) #df["rank"] = df.rank(method="first")
+
+    # Transform to uniform distribution
+    df["rank_value"] = df["rank"] / len(df)
+
+    return df
+
+def _calculate_rank_values_for_cluster(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy().reset_index(drop=True)
+    df["rank"] = df[["Value"]].rank(method="first")
+
+    # Transform to uniform distribution
+    df["rank_value"] = df["rank"] / len(df)
+    return df
+
+
+def make_copula_filter(
+        data: list[pd.DataFrame],
+        nodes: list[str],
+        copulas: list[str],            
+        regularSeasonHours: int, 
+        seasons: list[str],
+        n_cluster: int,
+        filepath: Path = Path.cwd()
+) -> None:
+    
+    filepath = filepath / "CopulaClusters"
+
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+
+    # Calculate mean values for all possible sampling hours
+    mean_dfs = [make_mean(df, regularSeasonHours, seasons) for df in data]
+
+    frames = []
+    for s in seasons:
+        # Filter by season for each dataset
+        season_dfs = [df[df["Season"] == s] for df in mean_dfs]
+
+        # Calculate rank values for each dataset
+        season_dfs = [_calculate_rank_values_for_cluster(df) for df in season_dfs]
+
+        # Pick first of dfs as base
+        base_df = season_dfs[0]
+        base_df["Value1"] = base_df["rank_value"]
+
+        # Add other rank values to base df
+        if len(season_dfs) > 1: 
+            for i in range(1, len(season_dfs)):
+                base_df.insert(len(base_df.columns), f"Value{i+1}", season_dfs[i]["rank_value"])
+
+        kmeans = KMeans(init="k-means++", n_clusters=n_cluster, n_init=100)
+        fit_predict_cols = [f"Value{i+1}" for i in range(len(season_dfs))]
+
+        kmeans.fit(base_df[fit_predict_cols])
+        group = kmeans.predict(base_df[fit_predict_cols])
+        base_df.insert(len(base_df.columns), "ClusterGroup", group)
+
+        if len(season_dfs) == 3:
+            # Create a 3D scatter plot
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='3d')
+            ax.scatter(xs=base_df["Value1"], ys=base_df["Value2"], zs=base_df["Value3"], c=base_df["ClusterGroup"], s=0.2)
+            ax.set_xlabel(f"{copulas[0]}-{nodes[0]}", labelpad=-8, fontsize=8)
+            ax.set_ylabel(f"{copulas[0]}-{nodes[1]}", labelpad=-8, fontsize=8)
+            ax.set_zlabel(f"{copulas[0]}-{nodes[2]}", labelpad=-8, fontsize=8)
+            ax.set_title(f"{n_cluster} clusters of data for seasons {s}")
+
+            # Adjust axis label positions and angles
+            ax.tick_params(axis='x', pad=-3,  labelsize=8)
+            ax.tick_params(axis='y', pad=-3, labelsize=8)
+            ax.tick_params(axis='z', pad=-3, labelsize=8)
+
+            plt.savefig(filepath / f"{s}")
+
+        frames.append(base_df)
+    copula_clusters = pd.concat(frames)
+    copula_clusters = copula_clusters.drop(columns=["Value", "rank", "rank_value"]).reset_index(drop=True)
+    copula_clusters.to_csv(filepath / "copula_clusters.csv", index=False)
+
 
 def make_filter_result(data1, data2, regularSeasonHours, seasons, n_cluster, filepath: Path):
     data1_ws = make_ws(data1, regularSeasonHours, seasons)
@@ -361,21 +447,6 @@ def make_filter_result(data1, data2, regularSeasonHours, seasons, n_cluster, fil
         frames.append(ws_1)
     filter_result = pd.concat(frames)
     filter_result.to_csv(filepath / "filter_result.csv", index=False)
-
-
-def _calculate_rank_values(data: pd.DataFrame) -> pd.DataFrame:
-    df = data.copy().reset_index(drop=True)
-
-    df["rank"] = df.rank(method="first")
-
-    # Sample and reindex to get random order if tie
-    # df["rank"] = df.sample(frac=1).rank(method='first').reindex_like(df) #df["rank"] = df.rank(method="first")
-
-    # Transform to uniform distribution
-    df["rank_value"] = df["rank"] / len(df)
-
-    return df
-
 
 def _scale_to_integers(x: float, y: float, scale_factor: int) -> Tuple[int, int]:
     # Scale the floats to integers within a suitable range
@@ -509,6 +580,8 @@ def generate_random_scenario(
     copula_make = empire_config.copula_make
     copula_use = empire_config.copula_use
     copulas_to_use = empire_config.copulas_to_use
+    copula_clusters_make = empire_config.copula_clusters_make
+    copula_clusters_use = empire_config.copula_clusters_use
     n_cluster = empire_config.n_cluster
     moment_matching = empire_config.moment_matching
     n_tree_compare = empire_config.n_tree_compare
@@ -563,8 +636,7 @@ def generate_random_scenario(
         filter_result = pd.read_csv(scenario_data_path / "filter_result.csv")
         cluster = n_cluster - 1
 
-    if copula_make: 
-        COPULA_TO_DF_MAPPING = dict({
+    COPULA_TO_DF_MAPPING = dict({
             "electricload": electricload_data,
             "solar": solar_data,
             "windonshore": windonshore_data,
@@ -572,6 +644,28 @@ def generate_random_scenario(
             "hydroror": hydroror_data,
             "hydroseasonal": hydroseasonal_data,
         })
+    
+    if copula_clusters_make: 
+        print("Making copula clusters...")
+        data = [make_datetime(COPULA_TO_DF_MAPPING[copula][[node, "time"]], time_format) for copula in copulas_to_use for node in unique_nodes]
+        filepath = Path.cwd() / "Copulas"
+
+        make_copula_filter(data=data,
+                           nodes=unique_nodes,
+                           copulas=copulas_to_use,
+                           regularSeasonHours=len_of_regular_season, 
+                           seasons=seasons, 
+                           n_cluster=n_cluster, 
+                           filepath=filepath)
+
+    if copula_clusters_use:
+        print("Using copula clusters...")
+        filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
+        copula_filter = pd.read_csv(filepath / "copula_clusters.csv")
+        cluster = n_cluster - 1
+
+
+    if copula_make: 
         for copula in copulas_to_use:
             filepath = Path.cwd() / "Copulas" / copula
             for i in range(len(unique_nodes)):
@@ -634,12 +728,15 @@ def generate_random_scenario(
 
                     # Get sample year for each season/scenario
 
-                    if filter_use:
+                    if filter_use or copula_clusters_use:
                         if cluster == n_cluster - 1:
                             cluster = 0
                         else:
                             cluster += 1
-                        valid_pick = filter_result[filter_result["ClusterGroup"] == cluster]
+                        if filter_use:
+                            valid_pick = filter_result[filter_result["ClusterGroup"] == cluster]
+                        else:
+                            valid_pick = copula_filter[copula_filter["ClusterGroup"] == cluster]
                         valid_pick = valid_pick[valid_pick["Season"] == s]
                         sample_year = np.random.choice(valid_pick["Year"])
                         valid_pick = valid_pick[valid_pick["Year"] == sample_year]
@@ -667,7 +764,7 @@ def generate_random_scenario(
 
                     # Filter the sample range by K-means if filter_sample=True
 
-                    if filter_use:
+                    if filter_use or copula_clusters_use:
                         sample_hour = np.random.choice(valid_pick["SampleIndex"])
                     else:
                         window = solar_season.shape[0] - len_of_regular_season - 1
