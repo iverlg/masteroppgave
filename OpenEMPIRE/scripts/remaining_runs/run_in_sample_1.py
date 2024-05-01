@@ -24,9 +24,9 @@ dataset = args.dataset
 config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
-routine = "basic"
+routine = "copula-filter"
 num_scenarios = 10
-num_instances = 30
+num_instances = 5
 start_instance = 1
 
 # For SGR routines add extra detail to output-folder / name
@@ -37,6 +37,8 @@ elif routine == "filter":
     routine_detail = f"filter{empire_config.n_cluster}"
 elif routine == "copula":
     routine_detail = f"copula{empire_config.n_tree_compare}"
+elif routine == "copula-filter":
+    routine_detail = f"copula-filter{empire_config.n_cluster}"
 else:
     routine_detail = "basic"
 
@@ -45,29 +47,40 @@ empire_config.use_scenario_generation = True
 empire_config.use_fixed_sample = False
 empire_config.filter_make = False
 empire_config.copula_make = False
+empire_config.copula_clusters_make = False
 empire_config.number_of_scenarios = num_scenarios
 
 if routine == "filter":
     empire_config.moment_matching = False
     empire_config.filter_use = True
     empire_config.copula_use = False
+    empire_config.copula_clusters_use = False
 elif routine == "moment":
     empire_config.moment_matching = True
     empire_config.filter_use = False
     empire_config.copula_use = False
+    empire_config.copula_clusters_use = False
 elif routine == "copula":
     empire_config.moment_matching = False
     empire_config.filter_use = False
     empire_config.copula_use = True
+    empire_config.copula_clusters_use = False
+elif routine == "copula-filter":
+    empire_config.moment_matching = False
+    empire_config.filter_use = False
+    empire_config.copula_use = False
+    empire_config.copula_clusters_use = True
 else: 
     empire_config.moment_matching = False
     empire_config.filter_use = False
     empire_config.copula_use = False
+    empire_config.copula_clusters_use = False
+
 
 # Run script
 for i in range(start_instance, start_instance + num_instances):
 
-    run_path = Path.cwd() / "Results/run_in_sample_new/dataset_{ds}/{r}_sce{ns}_{i}".format(
+    run_path = Path.cwd() / "Results/run_in_sample/dataset_{ds}/{r}_sce{ns}_{i}".format(
                 ds=dataset,
                 r=routine_detail,
                 ns=num_scenarios,
