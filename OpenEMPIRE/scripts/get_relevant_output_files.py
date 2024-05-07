@@ -18,7 +18,7 @@ parser.add_argument(
     "-rdir",
     "--results-directory",
     help="Specify the results directory for in sample runs",
-    default="run_in_sample_new",
+    default="run_in_sample",
 )
 
 args = parser.parse_args()
@@ -49,6 +49,9 @@ for run_path in all_run_paths:
     num_scenarios = run_config.split("_")[1][3:]
     instance_num = run_config.split("_")[2]
 
+    if sgr_method != "copula-filter10":
+        continue
+
     if not os.path.exists(new_results_path / sgr_method):
         os.makedirs(new_results_path / sgr_method)
     
@@ -64,7 +67,7 @@ for run_path in all_run_paths:
     for filename in os.listdir(run_path / "Output"):
         # Skip files in the exclude list
         #if filename in exclude_files:
-        if filename not in include_files:
+        if filename in exclude_files:
             continue
 
         # Construct the full path of the item

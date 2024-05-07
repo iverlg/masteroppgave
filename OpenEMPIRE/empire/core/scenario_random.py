@@ -660,7 +660,14 @@ def generate_random_scenario(
 
     if copula_clusters_use:
         print("Using copula clusters...")
-        filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
+        if "windonshore" in copulas_to_use and "solar" in copulas_to_use:
+            filepath = Path.cwd() / "Copulas" / "CopulaClustersCombo" 
+        elif "windonshore" in copulas_to_use:
+            filepath = Path.cwd() / "Copulas" / "CopulaClustersWind" 
+        elif "solar" in copulas_to_use:
+            filepath = Path.cwd() / "Copulas" / "CopulaClustersSolar" 
+        else:         
+            filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
         copula_filter = pd.read_csv(filepath / "copula_clusters.csv")
         cluster = n_cluster - 1
 

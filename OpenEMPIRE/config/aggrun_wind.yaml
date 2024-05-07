@@ -20,7 +20,7 @@ copula_make: False                                     # Make empirical (true) c
 copula_use: False                                      # Copula-based scenario generation (sampling approach)
 copula_clusters_make: False                            # Make copule clusters
 copula_clusters_use: False                             # Copula-based scenario generation (strata/filter approach)
-copulas_to_use: ["electricload"]                       # Copulas to be used and/or made for sampling comparison; ["electricload", "hydroror", "hydroseasonal", "solar", "windoffshore", "windonshore"]
+copulas_to_use: ["windonshore"]                       # Copulas to be used and/or made for sampling comparison; ["electricload", "hydroror", "hydroseasonal", "solar", "windoffshore", "windonshore"]
 n_tree_compare : 20                                    # Number of trees to compare for moment matching and copula-sampling
 use_emission_cap: True                                 # Indicates if there's a cap on CO2 emissions
 compute_operational_duals: True                        # Resolve empire with fixed investment variables and write new duals

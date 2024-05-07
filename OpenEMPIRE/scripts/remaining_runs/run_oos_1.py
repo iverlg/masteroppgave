@@ -38,11 +38,11 @@ dataset = args.dataset
 results_dir = args.results_directory
 
 ### CHANGE THESE ###
-method = "copula20"
+method = "copula-filter10"
 num_scenarios = 10
-start_instance = 16
+start_instance = 1
 
-num_instances = 1
+num_instances = 4
 instances = [i for i in range(start_instance, start_instance + num_instances)]
 num_oos_trees = 10
 
