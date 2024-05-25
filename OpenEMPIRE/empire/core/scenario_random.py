@@ -687,7 +687,6 @@ def generate_random_scenario(
                            seasons=seasons, 
                            n_cluster=n_cluster, 
                            filepath=filepath)
-        return
 
     if copula_clusters_use:
         print("Using copula clusters...")
@@ -1267,7 +1266,6 @@ def generate_random_scenario(
         elecLoad = elecLoad_dict[min_tree_key]
         hydroSeasonal = hydroSeasonal_dict[min_tree_key]
 
-    return
     logger.info("Done generating scenarios.")
 
     # Replace country codes with country names
