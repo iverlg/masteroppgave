@@ -38,17 +38,19 @@ dataset = args.dataset
 results_dir = args.results_directory
 
 ### CHANGE THESE ###
-method = "copula-filter10"
-num_scenarios = 10
+method = "copula-filter5"
+num_scenarios = 100
 start_instance = 1
 
-num_instances = 4
+num_instances = 3
 instances = [i for i in range(start_instance, start_instance + num_instances)]
 num_oos_trees = 10
 
 ## Read config and setup folders ##
 config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
+
+empire_config.n_cluster = 5
 
 # Modifications to config
 empire_config.use_scenario_generation = False

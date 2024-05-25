@@ -361,6 +361,11 @@ def _calculate_rank_values_for_cluster(data: pd.DataFrame) -> pd.DataFrame:
     df["rank_value"] = df["rank"] / len(df)
     return df
 
+MAPPING = {
+    "windonshore": "Wind onshore",
+    "electricload": "Load",
+    "solar": "Solar PV"
+}
 
 def make_copula_filter(
         data: list[pd.DataFrame],
@@ -372,7 +377,20 @@ def make_copula_filter(
         filepath: Path = Path.cwd()
 ) -> None:
     
-    filepath = filepath / "CopulaClusters"
+    if n_cluster == 5:         
+            filepath = filepath / "CopulaClusters5-2" 
+    elif n_cluster == 25:         
+        filepath = filepath / "CopulaClusters25-2"
+    elif n_cluster == 50:         
+        filepath = filepath / "CopulaClusters50-2"
+    elif n_cluster == 100:         
+        filepath = filepath / "CopulaClusters100-2" 
+    elif "windonshore" in copulas:
+        filepath = filepath / "CopulaClustersWind2" 
+    elif "solar" in copulas:
+        filepath = filepath / "CopulaClustersSolar2" 
+    else: 
+        filepath = filepath / "CopulaClustersLoad2" 
 
     if not os.path.exists(filepath):
         os.makedirs(filepath)
@@ -406,18 +424,24 @@ def make_copula_filter(
 
         if len(season_dfs) == 3:
             # Create a 3D scatter plot
-            fig = plt.figure()
+            plt.rcParams.update({'font.size': 20})
+            fig = plt.figure(figsize=(10, 8))
             ax = fig.add_subplot(projection='3d')
-            ax.scatter(xs=base_df["Value1"], ys=base_df["Value2"], zs=base_df["Value3"], c=base_df["ClusterGroup"], s=0.2)
-            ax.set_xlabel(f"{copulas[0]}-{nodes[0]}", labelpad=-8, fontsize=8)
-            ax.set_ylabel(f"{copulas[0]}-{nodes[1]}", labelpad=-8, fontsize=8)
-            ax.set_zlabel(f"{copulas[0]}-{nodes[2]}", labelpad=-8, fontsize=8)
-            ax.set_title(f"{n_cluster} clusters of data for seasons {s}")
+            ax.scatter(xs=base_df["Value1"], ys=base_df["Value2"], zs=base_df["Value3"], c=base_df["ClusterGroup"], s=0.5)
+            ax.set_xlabel(f"{MAPPING[copulas[0]]} {nodes[0]}", labelpad=15, rotation_mode='anchor')
+            ax.set_ylabel(f"{MAPPING[copulas[0]]} {nodes[1]}", labelpad=20, rotation_mode='anchor')
+            ax.set_zlabel(f"{MAPPING[copulas[0]]} {nodes[2]}", labelpad=20, rotation_mode='anchor')
+            ax.set_title(f"Season = {s}")
 
             # Adjust axis label positions and angles
-            ax.tick_params(axis='x', pad=-3,  labelsize=8)
-            ax.tick_params(axis='y', pad=-3, labelsize=8)
-            ax.tick_params(axis='z', pad=-3, labelsize=8)
+            ax.tick_params(axis='x', pad=12)
+            ax.tick_params(axis='y', pad=3)
+            ax.tick_params(axis='z', pad=-1)
+
+            ticks = ["0.0", "0.0", "0.2", "0.4", "0.6", "0.8", "1.0"]
+            ax.set_xticklabels(ticks, verticalalignment='baseline', horizontalalignment='left')
+            ax.set_yticklabels(ticks, verticalalignment='baseline', horizontalalignment='left')
+            ax.set_zticklabels(ticks, verticalalignment='baseline', horizontalalignment='left')
 
             plt.savefig(filepath / f"{s}")
 
@@ -482,11 +506,17 @@ def plot_copula(copula: pd.DataFrame,
     x = df_copula["rank_value_x"]
     y = df_copula["rank_value_y"]
 
-    plt.figure(figsize=(8,6))
-    plt.scatter(x, y, color="blue", s=0.2)
-    plt.xlabel(f"{x_descr} {x_node}, {'scenario '+str(scenario) if scenario else 'original'}")
-    plt.ylabel(f"{y_descr} {y_node}, {'scenario '+str(scenario) if scenario else 'original'}")
-    plt.title(f"Rank scatter: {x_node}-{y_node}{('; Distance = ' + str(round(distance, 3))) if distance != None else ''}")
+    plt.rcParams.update({'font.size': 20})
+    plt.figure(figsize=(10,6))
+    plt.scatter(x, y, color="blue", s=0.5)
+    plt.xlabel(f"{MAPPING[x_descr]} {x_node}")
+    plt.ylabel(f"{MAPPING[y_descr]} {y_node}")
+
+    title = "Original copula"
+    if distance != None:
+        title = f"Sampled copula. Distance = {distance:.1E}"
+
+    plt.title(title)
 
     filepath = filepath / "Plots"
     if scenario != None:
@@ -496,8 +526,8 @@ def plot_copula(copula: pd.DataFrame,
         os.makedirs(filepath)
     
     #plt.show()
-    plt.savefig(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}{'_scenario-' + str(scenario) if scenario != None else ''}")
-    #plt.close()
+    plt.savefig(filepath / f"{x_node}-{x_descr}_{y_node}-{y_descr}{'_scenario-' + str(scenario + 1) if scenario != None else ''}", bbox_inches="tight")
+    plt.close()
 
 
 def make_copula(data_x: pd.DataFrame, 
@@ -657,16 +687,19 @@ def generate_random_scenario(
                            seasons=seasons, 
                            n_cluster=n_cluster, 
                            filepath=filepath)
+        return
 
     if copula_clusters_use:
         print("Using copula clusters...")
-        if "windonshore" in copulas_to_use and "solar" in copulas_to_use:
-            filepath = Path.cwd() / "Copulas" / "CopulaClustersCombo" 
-        elif "windonshore" in copulas_to_use:
-            filepath = Path.cwd() / "Copulas" / "CopulaClustersWind" 
-        elif "solar" in copulas_to_use:
-            filepath = Path.cwd() / "Copulas" / "CopulaClustersSolar" 
-        else:         
+        if n_cluster == 5:         
+            filepath = Path.cwd() / "Copulas" / "CopulaClusters5" 
+        elif n_cluster == 25:         
+            filepath = Path.cwd() / "Copulas" / "CopulaClusters25"
+        elif n_cluster == 50:         
+            filepath = Path.cwd() / "Copulas" / "CopulaClusters50"
+        elif n_cluster == 100:         
+            filepath = Path.cwd() / "Copulas" / "CopulaClusters100" 
+        else: 
             filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
         copula_filter = pd.read_csv(filepath / "copula_clusters.csv")
         cluster = n_cluster - 1
@@ -674,7 +707,7 @@ def generate_random_scenario(
 
     if copula_make: 
         for copula in copulas_to_use:
-            filepath = Path.cwd() / "Copulas" / copula
+            filepath = Path.cwd() / "Copulas" / "NewLoad" / copula
             for i in range(len(unique_nodes)):
                 for j in range(i, len(unique_nodes)):
                     n1 = unique_nodes[i]
@@ -1179,7 +1212,7 @@ def generate_random_scenario(
                         if n1==n2: 
                              continue
                         for copula in copulas_to_use:
-                            filepath = Path.cwd() / "Copulas" / copula
+                            filepath = Path.cwd() / "Copulas" / "NewLoad" / copula
                             if copula == "electricload":
                                 data_x = elecLoad[elecLoad["Node"] == n1][["ElectricLoadRaw_in_MW"]]
                                 data_y = elecLoad[elecLoad["Node"] == n2][["ElectricLoadRaw_in_MW"]]
@@ -1199,7 +1232,7 @@ def generate_random_scenario(
                                 data_y = genAvail[(genAvail["Node"] == n2) & \
                                                     (genAvail["IntermitentGenerators"] == COPULA_TO_GENERATOR_MAPPING[copula])]\
                                                     [["GeneratorStochasticAvailabilityRaw"]]
-                                weight = 1
+                                weight = 1/3
                             sampled_copula = make_copula(data_x, 
                                                         data_y, 
                                                         filepath=filepath,
@@ -1213,14 +1246,14 @@ def generate_random_scenario(
                                                         x_node=n1,
                                                         y_node=n2)
                             copula_dist = calculate_copula_dist(real_copula, sampled_copula)
-                            """ plot_copula(copula=sampled_copula,
+                            plot_copula(copula=sampled_copula,
                                         filepath=filepath,
                                         x_descr=copula,
                                         y_descr=copula,
                                         x_node=n1,
                                         y_node=n2,
                                         scenario=tree, 
-                                        distance=copula_dist) """
+                                        distance=copula_dist)
                             score.append(copula_dist * weight)
             score_dict[tree] = sum(score)
             # Reset the tree
@@ -1234,6 +1267,7 @@ def generate_random_scenario(
         elecLoad = elecLoad_dict[min_tree_key]
         hydroSeasonal = hydroSeasonal_dict[min_tree_key]
 
+    return
     logger.info("Done generating scenarios.")
 
     # Replace country codes with country names

@@ -49,7 +49,7 @@ for run_path in all_run_paths:
     num_scenarios = run_config.split("_")[1][3:]
     instance_num = run_config.split("_")[2]
 
-    if sgr_method != "copula-filter10":
+    if sgr_method not in ["copula-filter25", "copula-filter5"]:
         continue
 
     if not os.path.exists(new_results_path / sgr_method):

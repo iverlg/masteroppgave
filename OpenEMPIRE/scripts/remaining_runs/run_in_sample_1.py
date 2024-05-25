@@ -24,10 +24,12 @@ dataset = args.dataset
 config = read_config_file(Path(args.config_file))
 empire_config = EmpireConfiguration.from_dict(config=config)
 
-routine = "copula-filter"
+routine = "copula-filter5"
 num_scenarios = 100
-num_instances = 1
-start_instance = 29
+num_instances = 5
+start_instance = 1
+
+empire_config.n_cluster = 5
 
 # For SGR routines add extra detail to output-folder / name
 routine_detail = ""
@@ -37,7 +39,7 @@ elif routine == "filter":
     routine_detail = f"filter{empire_config.n_cluster}"
 elif routine == "copula":
     routine_detail = f"copula{empire_config.n_tree_compare}"
-elif routine == "copula-filter":
+elif routine == 'copula-filter5':
     routine_detail = f"copula-filter{empire_config.n_cluster}"
 else:
     routine_detail = "basic"
@@ -65,7 +67,7 @@ elif routine == "copula":
     empire_config.filter_use = False
     empire_config.copula_use = True
     empire_config.copula_clusters_use = False
-elif routine == "copula-filter":
+elif routine == "copula-filter5" or routine == "copula-filter25":
     empire_config.moment_matching = False
     empire_config.filter_use = False
     empire_config.copula_use = False
@@ -74,7 +76,7 @@ else:
     empire_config.moment_matching = False
     empire_config.filter_use = False
     empire_config.copula_use = False
-    empire_config.copula_clusters_use = False
+    empire_config.copula_clusters_use = True
 
 
 # Run script

@@ -4,7 +4,7 @@
 use_temporary_directory: True                          # Specifies whether to use a temporary directory for operations
 temporary_directory: '/mnt/beegfs/users/iogjorva'      # Path to the temporary directory used for certain operations
 forecast_horizon_year: 2050                            # Target or end year for the run
-number_of_scenarios: 5                                 # Number of scenarios in every investment period
+number_of_scenarios: 100                               # Number of scenarios in every investment period
 length_of_regular_season: 168                          # Number of hours in a regular season
 discount_rate: 0.05                                    # Rate used to discount future cash flows to present value
 wacc: 0.05                                             # Weighted average cost of capital
@@ -16,8 +16,8 @@ filter_make : False                                    #
 filter_use : False                                     #
 n_cluster : 10                                         #
 moment_matching : False                                #
-copula_make: False                                     # Make empirical (true) copulas for copula-based scenario generation
-copula_use: False                                      # Copula-based scenario generation (sampling approach)
+copula_make: False                                      # Make empirical (true) copulas for copula-based scenario generation
+copula_use: True                                       # Copula-based scenario generation (sampling approach)
 copula_clusters_make: False                            # Make copule clusters
 copula_clusters_use: False                             # Copula-based scenario generation (strata/filter approach)
 copulas_to_use: ["electricload"]                       # Copulas to be used and/or made for sampling comparison; ["electricload", "hydroror", "hydroseasonal", "solar", "windoffshore", "windonshore"]

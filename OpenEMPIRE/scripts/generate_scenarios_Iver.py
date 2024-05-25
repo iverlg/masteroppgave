@@ -26,6 +26,12 @@ scenario_data_path = Path.cwd() / f"Data handler/{version}/ScenarioData"
 with open(Path.cwd() / "config/countries.json", "r", encoding="utf-8") as file:
     dict_countries = json.load(file)
 
+empire_config.number_of_scenarios = 1
+empire_config.n_tree_compare = 20
+empire_config.copula_make = False
+empire_config.copula_use = True
+empire_config.copulas_to_use = ["electricload"]                       # Copulas to be used and/or made for sampling comparison; ["electricload", "hydroror", "hydroseasonal", "solar", "windoffshore", "windonshore"]
+
 if not check_scenarios_exist(scenario_data_path=scenario_data_path) or args.force:
     logger.info("Generating scenarios.")
     generate_random_scenario(

@@ -21,8 +21,8 @@ MAPPING = dict({
     "hydro_seasonal": df_hydro_seasonal
 })
 
-LOCATION_X = "north"
-LOCATION_Y = "west"
+LOCATION_X = "North"
+LOCATION_Y = "East"
 DF_X = "load"
 DF_Y = "load"
 N_SCENARIOS = 50
@@ -51,17 +51,31 @@ def remove_time_and_filter_location(df: pd.DataFrame, location: str) -> pd.DataF
     _df = _df[[location]]
     return _df
 
-def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, scenario = None, distance: float = None) -> None:
+TEXT_MAPPING = {
+    "load": "Load",
+    "solar": "Solar PV", 
+    "onshore_wind": "Wind onshore"
+}
+
+def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, xx: str, yy: str, scenario = None, distance: float = None) -> None:
     _df = df.copy()
     x = _df["rank_value_x"]
     y = _df["rank_value_y"]
 
-    plt.figure(figsize=(8,6))
-    plt.scatter(x, y, color="blue", s=0.2)
-    plt.xlabel(f"{DF_X} {loc_x}, {'scenario '+str(scenario) if scenario else 'original'}")
-    plt.ylabel(f"{DF_Y} {loc_y}, {'scenario '+str(scenario) if scenario else 'original'}")
-    plt.title(f"Rank scatter: {loc_x}-{loc_y}{('; Distance = '+str(distance)) if distance != None else ''}")
-    plt.savefig(f"copula_testing/copula_figs/{'scenario_'+str(scenario) if scenario != None else 'original'}")
+    plt.rcParams.update({'font.size': 20})
+    plt.figure(figsize=(10,6))
+    plt.scatter(x, y, color="blue", s=0.5)
+
+    plt.xlabel(f"{TEXT_MAPPING[xx]} {loc_x}")
+    plt.ylabel(f"{TEXT_MAPPING[yy]} {loc_y}")
+
+    title = "Original copula"
+    if distance != None:
+        title = f"Sampled copula. Distance = {distance:.1E}"
+
+    plt.title(title)
+    plt.savefig(f"copula_testing/original_copula_figs/{xx}-{yy}_{loc_x}-{loc_y}{'_scenario-' + str(scenario + 1) if scenario != None else ''}", bbox_inches="tight")
+    plt.close()
 
 def generate_random_scenario() -> list[int]:
     # Pick random year (1-5)
@@ -140,14 +154,30 @@ def calculate_distance(df_copula: pd.DataFrame, df_copula_sample: pd.DataFrame) 
     return distance """
 
 def main():
-    loc_x = LOCATION_X
-    loc_y = LOCATION_Y
-    df_x = remove_time_and_filter_location(MAPPING[DF_X], location=loc_x)
-    df_y = remove_time_and_filter_location(MAPPING[DF_Y], location=loc_y)
+    considered_combos = []
+    unique_nodes = ["East", "North", "West"]
+    for i in range(len(unique_nodes)):
+        for j in range(i, len(unique_nodes)):
+            loc_x = unique_nodes[i]
+            loc_y = unique_nodes[j]
+            for xx in TEXT_MAPPING.keys():
+                for yy in TEXT_MAPPING.keys():
+                    if loc_x==loc_y and xx==yy: 
+                        continue
 
-    df_copula_original = generate_copula(df_x, df_y)
-    plot_copula(df_copula_original, loc_x, loc_y, scenario=None, distance=None)
+                    considered = sorted([loc_x, loc_y, xx, yy])
+                    if considered in considered_combos:
+                        continue
+                    else:
+                        considered_combos.append(considered)
+                    df_x = remove_time_and_filter_location(MAPPING[xx], location=loc_x)
+                    df_y = remove_time_and_filter_location(MAPPING[yy], location=loc_y)
+
+                    df_copula_original = generate_copula(df_x, df_y)
+                    plot_copula(df_copula_original, loc_x, loc_y, xx, yy, scenario=None, distance=None)
+
     
+    """ 
     min_distance = np.inf
     best_copula: pd.DataFrame = None
 
@@ -160,7 +190,7 @@ def main():
         if sample_distance < min_distance:
             best_copula = df_copula_sample
             min_distance = sample_distance
-    plot_copula(best_copula, loc_x, loc_y, scenario='best', distance=min_distance)
+    plot_copula(best_copula, loc_x, loc_y, scenario='best', distance=min_distance) """
 
 if __name__ == "__main__":
     main()
