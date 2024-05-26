@@ -5,3 +5,10 @@ COPULA_TO_GENERATOR_MAPPING = dict({
     "windoffshore": "Windoffshore",
     "windonshore": "Windonshore",
 })
+
+COPULA_TO_LABEL_MAPPING = dict({
+    "windonshore": "Wind onshore",
+    "electricload": "Load",
+    "solar": "Solar PV",
+    "hydroror": "Hydrorun-of-the-river",
+})

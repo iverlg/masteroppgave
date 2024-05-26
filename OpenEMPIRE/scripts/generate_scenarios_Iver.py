@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 import json
 import logging
+import time
 from argparse import ArgumentParser
 from pathlib import Path
 
 from empire.core.config import EmpireConfiguration, read_config_file
-from empire.core.scenario_random import check_scenarios_exist, generate_random_scenario
+from empire.core.scenario_random import (check_scenarios_exist,
+                                         generate_random_scenario)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,8 +18,8 @@ parser.add_argument("-f", "--force", help="Force new scenarios even if old scena
 
 args = parser.parse_args()
 
-version = "europe_agg_v50"
-config_path = Path("config/aggrun.yaml")
+version = "europe_v51"
+config_path = Path("config/run.yaml")
 config = read_config_file(config_path)
 empire_config = EmpireConfiguration.from_dict(config=config)
 
@@ -29,17 +31,22 @@ with open(Path.cwd() / "config/countries.json", "r", encoding="utf-8") as file:
 empire_config.number_of_scenarios = 1
 empire_config.n_tree_compare = 20
 empire_config.copula_make = False
-empire_config.copula_use = True
-empire_config.copulas_to_use = ["electricload"]                       # Copulas to be used and/or made for sampling comparison; ["electricload", "hydroror", "hydroseasonal", "solar", "windoffshore", "windonshore"]
+empire_config.copula_use = False
+empire_config.copula_clusters_make = ["electricload"]
 
 if not check_scenarios_exist(scenario_data_path=scenario_data_path) or args.force:
     logger.info("Generating scenarios.")
+
+    start_time = time.time()
     generate_random_scenario(
         empire_config=empire_config,
         dict_countries=dict_countries,
         scenario_data_path=scenario_data_path,
         tab_file_path=scenario_data_path,
     )
+    end_time = time.time()
+    runtime = end_time - start_time
+    print("Runtime:", runtime, "seconds")
 else:
     logger.warning(
         "Stochastic scenarios already exist in the ScenarioData folder. "

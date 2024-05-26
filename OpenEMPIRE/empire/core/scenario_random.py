@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from empire.core.config import EmpireConfiguration, EmpireRunConfiguration
-from empire.core.constants import COPULA_TO_GENERATOR_MAPPING
+from empire.core.constants import (COPULA_TO_GENERATOR_MAPPING,
+                                   COPULA_TO_LABEL_MAPPING)
 from scipy.stats import kurtosis, skew, wasserstein_distance
 from sklearn.cluster import KMeans
 
@@ -361,11 +362,6 @@ def _calculate_rank_values_for_cluster(data: pd.DataFrame) -> pd.DataFrame:
     df["rank_value"] = df["rank"] / len(df)
     return df
 
-MAPPING = {
-    "windonshore": "Wind onshore",
-    "electricload": "Load",
-    "solar": "Solar PV"
-}
 
 def make_copula_filter(
         data: list[pd.DataFrame],
@@ -377,20 +373,7 @@ def make_copula_filter(
         filepath: Path = Path.cwd()
 ) -> None:
     
-    if n_cluster == 5:         
-            filepath = filepath / "CopulaClusters5-2" 
-    elif n_cluster == 25:         
-        filepath = filepath / "CopulaClusters25-2"
-    elif n_cluster == 50:         
-        filepath = filepath / "CopulaClusters50-2"
-    elif n_cluster == 100:         
-        filepath = filepath / "CopulaClusters100-2" 
-    elif "windonshore" in copulas:
-        filepath = filepath / "CopulaClustersWind2" 
-    elif "solar" in copulas:
-        filepath = filepath / "CopulaClustersSolar2" 
-    else: 
-        filepath = filepath / "CopulaClustersLoad2" 
+    filepath = filepath / "CopulaClusters" 
 
     if not os.path.exists(filepath):
         os.makedirs(filepath)
@@ -428,9 +411,9 @@ def make_copula_filter(
             fig = plt.figure(figsize=(10, 8))
             ax = fig.add_subplot(projection='3d')
             ax.scatter(xs=base_df["Value1"], ys=base_df["Value2"], zs=base_df["Value3"], c=base_df["ClusterGroup"], s=0.5)
-            ax.set_xlabel(f"{MAPPING[copulas[0]]} {nodes[0]}", labelpad=15, rotation_mode='anchor')
-            ax.set_ylabel(f"{MAPPING[copulas[0]]} {nodes[1]}", labelpad=20, rotation_mode='anchor')
-            ax.set_zlabel(f"{MAPPING[copulas[0]]} {nodes[2]}", labelpad=20, rotation_mode='anchor')
+            ax.set_xlabel(f"{COPULA_TO_LABEL_MAPPING[copulas[0]]} {nodes[0]}", labelpad=15, rotation_mode='anchor')
+            ax.set_ylabel(f"{COPULA_TO_LABEL_MAPPING[copulas[0]]} {nodes[1]}", labelpad=20, rotation_mode='anchor')
+            ax.set_zlabel(f"{COPULA_TO_LABEL_MAPPING[copulas[0]]} {nodes[2]}", labelpad=20, rotation_mode='anchor')
             ax.set_title(f"Season = {s}")
 
             # Adjust axis label positions and angles
@@ -690,16 +673,7 @@ def generate_random_scenario(
 
     if copula_clusters_use:
         print("Using copula clusters...")
-        if n_cluster == 5:         
-            filepath = Path.cwd() / "Copulas" / "CopulaClusters5" 
-        elif n_cluster == 25:         
-            filepath = Path.cwd() / "Copulas" / "CopulaClusters25"
-        elif n_cluster == 50:         
-            filepath = Path.cwd() / "Copulas" / "CopulaClusters50"
-        elif n_cluster == 100:         
-            filepath = Path.cwd() / "Copulas" / "CopulaClusters100" 
-        else: 
-            filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
+        filepath = Path.cwd() / "Copulas" / "CopulaClusters" 
         copula_filter = pd.read_csv(filepath / "copula_clusters.csv")
         cluster = n_cluster - 1
 

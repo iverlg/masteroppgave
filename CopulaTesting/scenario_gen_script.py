@@ -5,12 +5,12 @@ from scipy.stats import wasserstein_distance
 
 AGGR = True
 
-df_onshr_wind = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/windonshore.csv")
-df_load = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/electricload.csv")
-df_solar = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/solar.csv")
-df_offshr_wind = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/windoffshore.csv")
-df_hydro_ror = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/hydroror.csv")
-df_hydro_seasonal = pd.read_csv(f"copula_testing/scenario_data{'_agg' if AGGR else ''}/hydroseasonal.csv")
+df_onshr_wind = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/windonshore.csv")
+df_load = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/electricload.csv")
+df_solar = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/solar.csv")
+df_offshr_wind = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/windoffshore.csv")
+df_hydro_ror = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/hydroror.csv")
+df_hydro_seasonal = pd.read_csv(f"CopulaTesting/scenario_data{'_agg' if AGGR else ''}/hydroseasonal.csv")
 
 MAPPING = dict({
     "onshore_wind": df_onshr_wind,
@@ -74,7 +74,7 @@ def plot_copula(df: pd.DataFrame, loc_x: str, loc_y: str, xx: str, yy: str, scen
         title = f"Sampled copula. Distance = {distance:.1E}"
 
     plt.title(title)
-    plt.savefig(f"copula_testing/original_copula_figs/{xx}-{yy}_{loc_x}-{loc_y}{'_scenario-' + str(scenario + 1) if scenario != None else ''}", bbox_inches="tight")
+    plt.savefig(f"CopulaTesting/original_copula_figs/{xx}-{yy}_{loc_x}-{loc_y}{'_scenario-' + str(scenario + 1) if scenario != None else ''}", bbox_inches="tight")
     plt.close()
 
 def generate_random_scenario() -> list[int]:
